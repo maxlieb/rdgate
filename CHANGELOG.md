@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.27
+
+- Fixed the gateway not starting: its sign-in provider URL now matches the issuer Gitea advertises, with the trailing slash. The log showed "issuer did not match".
+- Repair gateway also rewrites rdpgw.yaml from the saved settings, so an existing install gets the fix without reinstalling.
+
 ## 0.1.26
 
 - Settings opens the install folder. It was missing on the Go side, so the button did nothing.

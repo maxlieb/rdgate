@@ -71,10 +71,11 @@ func relayConfig(t *testing.T) Config {
 	return c
 }
 
-// The trailing slash on the issuer is the bug that cost real debugging time:
-// rdpgw compares ProviderUrl against the discovery document as an exact string.
-// Gitea's ROOT_URL wants the slash, so the two must not be the same string.
-func TestIssuerHasNoTrailingSlash(t *testing.T) {
+// The trailing slash is the detail that matters here. rdpgw compares
+// ProviderUrl with the issuer in the discovery document as an exact string,
+// and Gitea advertises its ROOT_URL, which ends in a slash. So ProviderUrl must
+// be that same string, slash included. (Live log: expected ".../auth" got ".../auth/".)
+func TestProviderURLMatchesGiteaIssuer(t *testing.T) {
 	for name, c := range map[string]Config{
 		"funnel": validConfig(t),
 		"direct": directConfig(t),
@@ -219,7 +220,7 @@ func TestRdpgwYAMLContainsEssentials(t *testing.T) {
 	for _, want := range []string{
 		"Tls: disable",
 		"GatewayAddress: pc.example-tailnet.ts.net",
-		"ProviderUrl: https://pc.example-tailnet.ts.net/auth",
+		"ProviderUrl: https://pc.example-tailnet.ts.net/auth/",
 		"TokenAuth: true",
 		"IdleTimeout: 0",
 		"VerifyClientIp: false",

@@ -63,7 +63,9 @@ func RdpgwYAML(c Config) (string, error) {
 	b.WriteString("OpenId:\n")
 	b.WriteString("  # No trailing slash: rdpgw compares this to the discovery document's\n")
 	b.WriteString("  # issuer as an exact string, and a slash fails the match.\n")
-	b.WriteString("  ProviderUrl: " + c.Issuer() + "\n")
+	// Must equal the issuer Gitea advertises, which is its ROOT_URL with the
+	// trailing slash. rdpgw compares the two as exact strings.
+	b.WriteString("  ProviderUrl: " + c.GiteaRootURL() + "\n")
 	b.WriteString("  ClientId: " + c.ClientID + "\n")
 	b.WriteString("  ClientSecret: '" + c.ClientSecret + "'\n")
 	b.WriteString("\n")

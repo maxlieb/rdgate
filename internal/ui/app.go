@@ -453,18 +453,14 @@ func (a *App) RestartGateway() error { return restart(provision.TaskGateway) }
 // then restarts it. Nothing is reinstalled and no settings change.
 func (a *App) RepairGateway() error {
 	a.mu.RLock()
-	root := a.cfg.InstallRoot
+	cfg := a.cfg
 	a.mu.RUnlock()
-	if root == "" {
+	if cfg.InstallRoot == "" {
 		return errors.New("this PC is not set up yet")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	if err := provision.RegisterGateway(ctx, root); err != nil {
-		return err
-	}
-	provision.StopTask(ctx, provision.TaskGateway)
-	return provision.StartTask(ctx, provision.TaskGateway)
+	return provision.RepairGateway(ctx, cfg)
 }
 func (a *App) RestartSignIn() error { return restart(provision.TaskSignIn) }
 

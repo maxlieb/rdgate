@@ -356,3 +356,25 @@ func RegisterGateway(ctx context.Context, installRoot string) error {
 	gwCmd := `/c ""` + rdpgwExe + `" --conf "` + winJoin(rdpgwDir, "rdpgw.yaml") + `" >> "` + gwLog + `" 2>&1"`
 	return RegisterTask(ctx, TaskGateway, "RD Gateway", "cmd.exe", gwCmd, rdpgwDir)
 }
+
+// RepairGateway rewrites rdpgw.yaml from the saved configuration, re-registers
+// the gateway task with logging, and restarts it. Nothing is reinstalled, and
+// the saved keys and client secret are reused.
+func RepairGateway(ctx context.Context, c Config) error {
+	rdpgwDir := winJoin(c.InstallRoot, "rdpgw")
+	if err := os.MkdirAll(rdpgwDir, 0o700); err != nil {
+		return err
+	}
+	yaml, err := RdpgwYAML(c)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(winJoin(rdpgwDir, "rdpgw.yaml"), []byte(yaml), 0o600); err != nil {
+		return err
+	}
+	if err := RegisterGateway(ctx, c.InstallRoot); err != nil {
+		return err
+	}
+	StopTask(ctx, TaskGateway)
+	return StartTask(ctx, TaskGateway)
+}
