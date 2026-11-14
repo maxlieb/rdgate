@@ -390,7 +390,7 @@ const REMEDIES = {
   "Sign-in service":{ label: "Restart sign-in",              call: "RestartSignIn" },
 };
 
-const state = { status: null, busy: false, door: "funnel" };
+const state = { status: null, busy: false, door: "funnel", tsLoginUrl: "" };
 
 // What the fix button for the public address does depends on how the gateway
 // is reached: republishing means nothing for a relay, where the useful thing
@@ -826,10 +826,18 @@ function buildTailscale(w) {
     ));
   } else {
     frag.appendChild(note("Tailscale is installed. Sign in to get this PC its address."));
+    if (state.tsLoginUrl) {
+      // Kept in state, because the wizard redraws every few seconds.
+      frag.appendChild(note("Sign-in page. If your browser did not open, copy this address into it:"));
+      const link = document.createElement("pre");
+      link.className = "script";
+      link.textContent = state.tsLoginUrl;
+      frag.appendChild(link);
+    }
     frag.appendChild(actions(button("Sign in to Tailscale", async (b) => {
       b.disabled = true; b.textContent = "Waiting for sign-in…";
       try {
-        await callBackend("TailscaleLogin");
+        state.tsLoginUrl = (await callBackend("TailscaleLogin")) || "";
         pollWizard();
       } catch (e) {
         b.disabled = false; b.textContent = "Sign in to Tailscale";

@@ -7,6 +7,7 @@
 package ui
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"os"
@@ -361,21 +362,61 @@ func (a *App) OpenRDPSettings() error {
 	return openURL("ms-settings:remotedesktop")
 }
 
-// TailscaleLogin starts the sign-in flow; Tailscale opens its own browser tab.
-func (a *App) TailscaleLogin() error {
+// TailscaleLogin starts sign-in and returns the address the person must open.
+//
+// Tailscale does not reliably open a browser when it is started from here, and
+// its own window may not show up either, so the button used to look dead. The
+// sign-in address is printed by `tailscale up`; this reads it, opens it, and
+// returns it so the wizard can show it as well. Empty means already signed in.
+func (a *App) TailscaleLogin() (string, error) {
 	ts, err := provision.FindTailscale()
 	if err != nil {
-		return errors.New("Tailscale is not installed")
+		return "", errors.New("Tailscale is not installed")
 	}
 	// Deliberately no context and no cancel: a cancelled context kills the
-	// process as soon as this function returns, which is why the button did
-	// nothing before. tailscale up waits for the browser sign-in on its own.
+	// process as soon as this function returns. tailscale up keeps running
+	// until the browser sign-in finishes.
 	cmd := provision.Command(context.Background(), ts.Exe, "up")
-	if err := cmd.Start(); err != nil {
-		return errors.New("could not start Tailscale sign-in: " + err.Error())
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", err
 	}
-	go func() { _ = cmd.Wait() }() // reap the process when it finishes
-	return nil
+	if err := cmd.Start(); err != nil {
+		return "", errors.New("could not start Tailscale sign-in: " + err.Error())
+	}
+
+	found := make(chan string, 1)
+	go func() {
+		sent := false
+		sc := bufio.NewScanner(out)
+		for sc.Scan() {
+			if u := findLoginURL(sc.Text()); u != "" && !sent {
+				found <- u
+				sent = true
+			}
+		}
+		close(found) // nothing more to read: a closed channel yields ""
+		_ = cmd.Wait()
+	}()
+
+	select {
+	case u := <-found:
+		if u != "" {
+			_ = openURL(u) // best effort; the wizard also shows the address
+		}
+		return u, nil
+	case <-time.After(20 * time.Second):
+		return "", errors.New("Tailscale did not give a sign-in address. Click the Tailscale icon in the tray and choose Log in.")
+	}
+}
+
+// findLoginURL returns the sign-in address on a line of `tailscale up` output.
+func findLoginURL(line string) string {
+	i := strings.Index(line, "https://login.tailscale.com/")
+	if i < 0 {
+		return ""
+	}
+	return strings.Fields(line[i:])[0]
 }
 
 // EnableFunnel republishes both ports.
