@@ -5,6 +5,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Needed so a version tag can create a Release with the installer attached.
+permissions:
+  contents: write
+
 jobs:
   core-linux:
     runs-on: ubuntu-latest
@@ -47,3 +51,14 @@ jobs:
         with:
           name: rdgate-installer
           path: dist/*.exe
+      - name: Publish a Release for version tags
+        # Only tags such as v0.1.0 publish. Ordinary pushes stop at the artifact.
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          $files = Get-ChildItem dist\*.exe | ForEach-Object { $_.FullName }
+          gh release create $env:TAG $files `
+            --title "RD Gateway $env:TAG" `
+            --notes "Unsigned build. Windows SmartScreen may warn on first run; choose More info, then Run anyway."
