@@ -39,11 +39,12 @@ jobs:
       - name: Build the CLI for Windows
         run: go build -o build/rdgwctl.exe ./cmd/rdgwctl
       - name: Build the gateway program (rdpgw, Apache-2.0)
-        # Pinned to a release tag so the bundled binary is reproducible.
+        # Pinned to a commit: v9.0.1 has no Windows build of its socket code.
         # Its LICENSE ships next to it, as Apache-2.0 requires for redistribution.
         run: |
           New-Item -ItemType Directory -Force build | Out-Null
-          git clone --depth 1 --branch v9.0.1 https://github.com/bolkedebruin/rdpgw rdpgw-src
+          git clone https://github.com/bolkedebruin/rdpgw rdpgw-src
+          git -C rdpgw-src checkout 468f70cf7524daccb17438b6dd3041f777e6aea5
           Push-Location rdpgw-src
           # The upstream go.sum is incomplete for this tag; -mod=mod fills it in
           # while building, and the pinned tag keeps the result reproducible.

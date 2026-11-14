@@ -58,7 +58,7 @@ builds and tests anywhere without a module proxy.
 
 ## Prerequisites
 
-**rdpgw.exe.** The installer builds it in CI from the pinned `v9.0.1` tag and
+**rdpgw.exe.** The installer builds it in CI from the pinned `468f70c (main, pinned)` tag and
 ships it beside the app. To build it by hand, which is only needed off CI:
 
 ```
