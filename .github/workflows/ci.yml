@@ -45,7 +45,9 @@ jobs:
           New-Item -ItemType Directory -Force build | Out-Null
           git clone --depth 1 --branch v9.0.1 https://github.com/bolkedebruin/rdpgw rdpgw-src
           Push-Location rdpgw-src
-          go build -o ..\build\rdpgw.exe ./cmd/rdpgw
+          # The upstream go.sum is incomplete for this tag; -mod=mod fills it in
+          # while building, and the pinned tag keeps the result reproducible.
+          go build -mod=mod -o ..\build\rdpgw.exe ./cmd/rdpgw
           Pop-Location
           Copy-Item rdpgw-src\LICENSE build\rdpgw-LICENSE.txt
       - name: Install Wails
