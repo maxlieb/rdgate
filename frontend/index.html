@@ -408,8 +408,21 @@ function remedyFor(name) {
 // NOT named "go": a top-level `function go()` declaration creates a global
 // binding that overwrites the window.go object Wails injects, after which
 // every backend call silently fails. Found by running it, not by reading it.
+//
+// The namespace is the Go package the bound struct lives in. That is "ui" in
+// this app, not "main", so it is looked up rather than assumed: a hard-coded
+// name worked in the browser mock and failed silently in the real window.
+function backend() {
+  const ns = window.go || {};
+  for (const pkg of Object.keys(ns)) {
+    if (ns[pkg] && ns[pkg].App) return ns[pkg].App;
+  }
+  return null;
+}
+
 function callBackend(name, ...args) {
-  const fn = window.go?.main?.App?.[name];
+  const app = backend();
+  const fn = app && app[name];
   return fn ? fn(...args) : Promise.reject(new Error(name + " unavailable"));
 }
 
@@ -533,6 +546,14 @@ async function refresh() {
     render(await callBackend("Status"));
   } catch (err) {
     console.warn("status unavailable", err);
+    // Say so on screen. A blank window with no explanation is the failure
+    // this avoids: it looks like the app is broken for no reason.
+    const host = document.getElementById("steps") || document.body;
+    const box = document.createElement("div");
+    box.className = "verdict-box"; box.dataset.state = "bad";
+    box.textContent = "The app could not reach its own back end (" + (err?.message || err) +
+      "). Close it and open it again; if this repeats, send the message above.";
+    host.appendChild(box);
   } finally {
     btn.textContent = prev;
     state.busy = false;
