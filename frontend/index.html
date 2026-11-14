@@ -527,7 +527,11 @@ async function act(button, remedy) {
   button.disabled = true;
   button.textContent = "Working…";
   try {
-    const out = await callBackend(remedy.call);
+    // A call that never returns must not leave the button on "Working…" forever.
+    const out = await Promise.race([
+      callBackend(remedy.call),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timed out")), 120000)),
+    ]);
     if (remedy.copy && typeof out === "string") {
       await navigator.clipboard.writeText(out);
       button.textContent = "Copied";

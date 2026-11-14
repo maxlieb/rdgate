@@ -3,6 +3,7 @@ package provision
 import (
 	"context"
 	"os/exec"
+	"time"
 )
 
 // Command starts a helper program without a console window.
@@ -17,5 +18,9 @@ func Command(ctx context.Context, name string, args ...string) *exec.Cmd {
 	}
 	cmd := exec.CommandContext(ctx, name, args...)
 	hideConsole(cmd)
+	// When the context ends, the process is killed. But if it left a child
+	// holding the output pipe open, Wait would block forever. WaitDelay makes
+	// Go stop waiting for the pipes a few seconds after the kill.
+	cmd.WaitDelay = 5 * time.Second
 	return cmd
 }

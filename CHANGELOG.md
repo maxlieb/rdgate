@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.28
+
+- Publishing no longer hangs forever when Tailscale leaves a helper process running. Commands are cut off a few seconds after their timeout.
+- An action that does not answer within two minutes shows an error instead of staying on "Working…".
+
 ## 0.1.27
 
 - Fixed the gateway not starting: its sign-in provider URL now matches the issuer Gitea advertises, with the trailing slash. The log showed "issuer did not match".
