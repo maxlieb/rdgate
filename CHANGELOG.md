@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.20
+
+- Publishing on Tailscale no longer waits forever. After 90 seconds it stops and says that Funnel must be enabled for the tailnet in the admin console.
+
 ## 0.1.19
 
 - Fixed "Only signed in user is allowed to call APIs" when connecting the gateway to sign-in. The sign-in app is registered with a token that has the write:user scope, minted just for that step.

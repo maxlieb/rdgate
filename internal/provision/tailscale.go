@@ -124,7 +124,15 @@ func (t *Tailscale) EnableFunnel(ctx context.Context, caddyPort int) error {
 	args := []string{"funnel", "--bg",
 		"--tls-terminated-tcp=" + itoa(PublicPort),
 		"tcp://127.0.0.1:" + itoa(caddyPort)}
-	if out, err := t.run(ctx, args...); err != nil {
+	// Bounded: when Funnel is not enabled for the tailnet, the command can hang
+	// instead of failing, and the wizard then sits on "making the gateway reachable".
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	defer cancel()
+	out, err := t.run(ctx, args...)
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return errors.New("Tailscale did not finish publishing on 443. Funnel must be enabled for this tailnet: open the Tailscale admin console, enable Funnel, then press Publish again")
+	}
+	if err != nil {
 		return errors.New("publishing on 443 failed: " + out)
 	}
 	return nil
