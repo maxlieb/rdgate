@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.13
+## 0.1.14
 
 - Fixed "The task XML contains a value which is incorrectly formatted or out of range" when the sign-in service is registered. The task's logon type was not valid for the schema in use.
 
