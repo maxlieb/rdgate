@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.15
+
+- The app asks for administrator rights when it starts. Registering the sign-in service was refused with "Access is denied" because the app ran without them.
+
 ## 0.1.14
 
 - Fixed "The task XML contains a value which is incorrectly formatted or out of range" when the sign-in service is registered. The task's logon type was not valid for the schema in use.

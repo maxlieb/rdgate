@@ -34,6 +34,9 @@ import (
 )
 
 func main() {
+	if relaunchElevated() {
+		return // the elevated copy takes over
+	}
 	root := os.Getenv("ProgramData")
 	if root == "" {
 		root = "."
