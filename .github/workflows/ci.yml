@@ -123,6 +123,13 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           $files = Get-ChildItem dist\*.exe | ForEach-Object { $_.FullName }
+          # Only this version's section of the changelog goes into the release notes.
+          $version = $env:TAG.TrimStart('v')
+          $text = Get-Content CHANGELOG.md -Raw
+          $m = [regex]::Match($text, "(?ms)^## $([regex]::Escape($version))\r?\n(.*?)(?=^## |\z)")
+          if (-not $m.Success) { throw "CHANGELOG.md has no section for $version" }
+          $notes = Join-Path $env:RUNNER_TEMP "notes.md"
+          $m.Groups[1].Value.Trim() | Set-Content -Path $notes -Encoding utf8
           gh release create $env:TAG $files --target $env:SHA `
             --title "RD Gateway $env:TAG" `
-            --notes-file CHANGELOG.md
+            --notes-file $notes
