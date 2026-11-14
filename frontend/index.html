@@ -434,6 +434,12 @@ function severity(checks) {
 }
 
 function render(status) {
+  // The dashboard refreshes every few seconds. Rebuilding an unchanged list
+  // swallows clicks that began on a button and drops any text selection, so
+  // a redraw only happens when something actually changed.
+  const key = JSON.stringify([status, state.door]);
+  if (key === state.renderKey) return;
+  state.renderKey = key;
   state.status = status;
   const checks = [...(status.checks || [])].sort(
     (a, b) => PATH_ORDER.indexOf(a.name) - PATH_ORDER.indexOf(b.name));

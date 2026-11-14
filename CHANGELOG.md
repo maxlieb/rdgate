@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.25
+
+- Dashboard no longer redraws when nothing changed. Buttons respond to clicks, and text can be selected and copied while it refreshes.
+
 ## 0.1.24
 
 - Dashboard: "Repair gateway" rewrites the gateway's scheduled task so it logs to rdpgw\rdpgw.log, then restarts it. Nothing is reinstalled.

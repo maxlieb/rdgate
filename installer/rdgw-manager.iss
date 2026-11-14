@@ -9,7 +9,7 @@
 ; Expects build\rdgw-manager.exe and build\rdgwctl.exe to exist.
 
 #define AppName       "RD Gateway Manager"
-#define AppVersion    "0.1.24"
+#define AppVersion    "0.1.25"
 #define AppPublisher  "Max Lieberman"
 #define AppExe        "rdgw-manager.exe"
 #define CtlExe        "rdgwctl.exe"
