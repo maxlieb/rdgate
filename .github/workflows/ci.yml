@@ -68,4 +68,4 @@ jobs:
           $files = Get-ChildItem dist\*.exe | ForEach-Object { $_.FullName }
           gh release create $env:TAG $files --target $env:SHA `
             --title "RD Gateway $env:TAG" `
-            --notes "Unsigned build. Windows SmartScreen may warn on first run; choose More info, then Run anyway."
+            --notes-file CHANGELOG.md
