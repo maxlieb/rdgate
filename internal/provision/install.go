@@ -167,7 +167,14 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 	}
 	c.GiteaAdminToken = token
 
-	clientID, clientSecret, err := gitea.CreateOAuthApp(ctx, c.AdminUser, password, c.RedirectURI())
+	// Registering the OAuth application needs write:user. A separate token is
+	// minted for that one call, so the status token stays read-only.
+	writeToken, err := gitea.MintToken(ctx, c.AdminUser, "write:user")
+	if err != nil {
+		report.step("Connecting gateway to sign-in", StepFailed, err.Error())
+		return nil, err
+	}
+	clientID, clientSecret, err := gitea.CreateOAuthApp(ctx, writeToken, c.RedirectURI())
 	if err != nil {
 		report.step("Connecting gateway to sign-in", StepFailed, err.Error())
 		return nil, err

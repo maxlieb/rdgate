@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.19
+
+- Fixed "Only signed in user is allowed to call APIs" when connecting the gateway to sign-in. The sign-in app is registered with a token that has the write:user scope, minted just for that step.
+
 ## 0.1.18
 
 - Fixed "403 Forbidden ... required write:user" when connecting the gateway to sign-in. The sign-in app is now registered with the account, and the status token stays read-only.

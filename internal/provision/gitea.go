@@ -257,11 +257,17 @@ func (g Gitea) RemoveSetupTokens(ctx context.Context, username, password string)
 // anyone enrolled TOTP", and a token sitting on disk should not also be able
 // to change anything.
 func (g Gitea) CreateAdminToken(ctx context.Context, username string) (string, error) {
+	return g.MintToken(ctx, username, "read:admin")
+}
+
+// MintToken creates an access token with the given scopes through the CLI,
+// which needs no sign-in. Each token gets its own name; see CreateAdminToken.
+func (g Gitea) MintToken(ctx context.Context, username, scopes string) (string, error) {
 	// A fixed token name collides with the one from an earlier attempt ("access
 	// token name has been used already"), so every run gets its own name.
 	name := "rdgw-setup-" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	out, err := g.cli(ctx, "admin", "user", "generate-access-token",
-		"--username", username, "--token-name", name, "--scopes", "read:admin", "--raw")
+		"--username", username, "--token-name", name, "--scopes", scopes, "--raw")
 	if err != nil {
 		return "", fmt.Errorf("generating an access token: %s", reason(out))
 	}
@@ -280,7 +286,7 @@ func (g Gitea) CreateAdminToken(ctx context.Context, username string) (string, e
 
 // CreateOAuthApp registers rdpgw as an OAuth2 client and returns its
 // credentials. There is no CLI verb for this, so it goes through the API.
-func (g Gitea) CreateOAuthApp(ctx context.Context, username, password, redirectURI string) (clientID, clientSecret string, err error) {
+func (g Gitea) CreateOAuthApp(ctx context.Context, token, redirectURI string) (clientID, clientSecret string, err error) {
 	body, _ := json.Marshal(map[string]any{
 		"name":                "RD Gateway",
 		"redirect_uris":       []string{redirectURI},
@@ -291,9 +297,7 @@ func (g Gitea) CreateOAuthApp(ctx context.Context, username, password, redirectU
 	if err != nil {
 		return "", "", err
 	}
-	// Basic auth with the account password: a token would need write:user, and
-	// the status token is deliberately read-only.
-	req.SetBasicAuth(username, password)
+	req.Header.Set("Authorization", "token "+token)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
