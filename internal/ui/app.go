@@ -169,6 +169,13 @@ func (a *App) InstallTailscale() error {
 	return errors.New("winget finished, but Tailscale was not found. Restart the app and try again")
 }
 
+// OpenTailscaleDownload opens Tailscale's Windows installer page. Offered
+// instead of installing from inside the app: a silent install has no visible
+// progress and no clear failure, so the person does it and presses Check again.
+func (a *App) OpenTailscaleDownload() error {
+	return openURL("https://tailscale.com/download/windows")
+}
+
 // lastLine returns the last non-empty line of a command's output.
 func lastLine(b []byte) string {
 	lines := strings.Split(strings.TrimSpace(string(b)), "\n")

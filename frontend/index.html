@@ -810,19 +810,20 @@ function buildTailscale(w) {
     frag.appendChild(note(wiz.door === "relay"
       ? "Tailscale is the private link between this PC and your server. Nothing is opened on your router."
       : "Tailscale gives this PC an address the outside world can reach, without opening a port on your router."));
-    frag.appendChild(actions(button("Install Tailscale", async (b) => {
-      b.disabled = true; b.textContent = "Installing…";
-      try {
-        await callBackend("InstallTailscale");
-        pollWizard();
-      } catch (e) {
-        b.disabled = false; b.textContent = "Install Tailscale";
-        const box = document.createElement("div");
-        box.className = "verdict-box"; box.dataset.state = "bad";
-        box.textContent = String(e?.message || e);
-        b.parentElement.after(box);
-      }
-    })));
+    frag.appendChild(note("Install Tailscale first. It takes a minute, then come back here and press Check again."));
+    const cmd = "winget install --id Tailscale.Tailscale --scope machine";
+    const pre = document.createElement("pre");
+    pre.className = "script";
+    pre.textContent = cmd;
+    frag.appendChild(pre);
+    frag.appendChild(actions(
+      button("Open the download page", () => callBackend("OpenTailscaleDownload")),
+      button("Copy the command", async (b) => {
+        try { await navigator.clipboard.writeText(cmd); b.textContent = "Copied"; } catch {}
+        setTimeout(() => (b.textContent = "Copy the command"), 1800);
+      }),
+      button("Check again", () => pollWizard(), true),
+    ));
   } else {
     frag.appendChild(note("Tailscale is installed. Sign in to get this PC its address."));
     frag.appendChild(actions(button("Sign in to Tailscale", async (b) => {
