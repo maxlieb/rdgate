@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.16
+
+- Fixed "access token name has been used already" when setup runs again after an earlier attempt. Each run now uses its own token name.
+
 ## 0.1.15
 
 - The app asks for administrator rights when it starts. Registering the sign-in service was refused with "Access is denied" because the app ran without them.

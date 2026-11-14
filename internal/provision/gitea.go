@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -206,8 +207,11 @@ func (g Gitea) CreateAdmin(ctx context.Context, username, password string) error
 // anyone enrolled TOTP", and a token sitting on disk should not also be able
 // to change anything.
 func (g Gitea) CreateAdminToken(ctx context.Context, username string) (string, error) {
+	// A fixed token name collides with the one from an earlier attempt ("access
+	// token name has been used already"), so every run gets its own name.
+	name := "rdgw-setup-" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	out, err := g.cli(ctx, "admin", "user", "generate-access-token",
-		"--username", username, "--scopes", "read:admin", "--raw")
+		"--username", username, "--token-name", name, "--scopes", "read:admin", "--raw")
 	if err != nil {
 		return "", fmt.Errorf("generating an access token: %s", reason(out))
 	}
