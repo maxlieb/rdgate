@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.18
+
+- Fixed "403 Forbidden ... required write:user" when connecting the gateway to sign-in. The sign-in app is now registered with the account, and the status token stays read-only.
+
 ## 0.1.17
 
 - Setup removes the access tokens that earlier setup runs created, so they do not pile up in the sign-in account.

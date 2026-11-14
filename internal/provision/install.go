@@ -167,7 +167,7 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 	}
 	c.GiteaAdminToken = token
 
-	clientID, clientSecret, err := gitea.CreateOAuthApp(ctx, token, c.RedirectURI())
+	clientID, clientSecret, err := gitea.CreateOAuthApp(ctx, c.AdminUser, password, c.RedirectURI())
 	if err != nil {
 		report.step("Connecting gateway to sign-in", StepFailed, err.Error())
 		return nil, err

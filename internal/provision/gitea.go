@@ -280,7 +280,7 @@ func (g Gitea) CreateAdminToken(ctx context.Context, username string) (string, e
 
 // CreateOAuthApp registers rdpgw as an OAuth2 client and returns its
 // credentials. There is no CLI verb for this, so it goes through the API.
-func (g Gitea) CreateOAuthApp(ctx context.Context, token, redirectURI string) (clientID, clientSecret string, err error) {
+func (g Gitea) CreateOAuthApp(ctx context.Context, username, password, redirectURI string) (clientID, clientSecret string, err error) {
 	body, _ := json.Marshal(map[string]any{
 		"name":                "RD Gateway",
 		"redirect_uris":       []string{redirectURI},
@@ -291,7 +291,9 @@ func (g Gitea) CreateOAuthApp(ctx context.Context, token, redirectURI string) (c
 	if err != nil {
 		return "", "", err
 	}
-	req.Header.Set("Authorization", "token "+token)
+	// Basic auth with the account password: a token would need write:user, and
+	// the status token is deliberately read-only.
+	req.SetBasicAuth(username, password)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := (&http.Client{Timeout: 30 * time.Second}).Do(req)
