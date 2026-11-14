@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.31
+
+- "Repair gateway" is always on the dashboard footer, not only when the gateway check fails. Use it to copy the web pages into place on an existing install.
+
 ## 0.1.30
 
 - The gateway's web pages ship with the installer and are copied into place on setup and on Repair. Without them the sign-in page showed a bare fallback with a disabled server list.

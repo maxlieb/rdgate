@@ -354,6 +354,7 @@ pre.script { margin: 10px 0 0; max-height: 150px; overflow: auto; padding: 10px 
     <span id="foot-note"></span>
     <span class="foot-actions">
       <button class="ghost" id="recheck">Check again</button>
+      <button class="ghost" id="repair" title="Rewrites the gateway's config and web pages, then restarts it. Nothing is reinstalled.">Repair gateway</button>
       <button class="ghost" id="settings">Settings</button>
     </span>
   </footer>
@@ -581,6 +582,8 @@ async function refresh() {
 document.getElementById("recheck").addEventListener("click", refresh);
 document.getElementById("open-portal").addEventListener("click", () => callBackend("OpenPortal"));
 document.getElementById("settings").addEventListener("click", () => callBackend("OpenSettings"));
+document.getElementById("repair").addEventListener("click", (e) =>
+  act(e.currentTarget, { label: "Repair gateway", call: "RepairGateway" }));
 document.getElementById("copy-address").addEventListener("click", async (e) => {
   const url = state.status?.portalUrl || "";
   try { await navigator.clipboard.writeText(url); } catch { return; }
