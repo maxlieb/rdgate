@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  core-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - run: go vet ./...
+      - run: go test ./...
+
+  windows:
+    # The real target. Task Scheduler, netsh, the Caddy and Gitea downloads and
+    # the Wails build can only be exercised here, not on Linux.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Core tests on Windows
+        run: go test ./...
+      - name: Build the CLI for Windows
+        run: go build -o build/rdgwctl.exe ./cmd/rdgwctl
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      - name: Build the desktop app
+        run: |
+          go mod tidy
+          wails build -tags wails -platform windows/amd64 -o rdgw-manager.exe
+      - name: Build the installer
+        run: |
+          choco install innosetup -y --no-progress
+          copy build\bin\rdgw-manager.exe build\
+          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\rdgw-manager.iss
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rdgate-installer
+          path: dist/*.exe

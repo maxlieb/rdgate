@@ -1,0 +1,1076 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RD Gateway</title>
+<!-- No webfont link, deliberately. A <link rel="stylesheet"> blocks the inline
+     script below until it resolves, so a remote font request leaves this
+     window blank whenever the network is unreachable - which is exactly when
+     someone opens this app. To use IBM Plex instead of the system stack, drop
+     the .woff2 files into frontend/fonts/ and uncomment the @font-face rules:
+     they are local files, so they cannot stall. -->
+<style>
+/*
+@font-face { font-family:"IBM Plex Sans"; src:url("fonts/IBMPlexSans-Regular.woff2") format("woff2");
+             font-weight:400; font-display:swap; }
+@font-face { font-family:"IBM Plex Sans"; src:url("fonts/IBMPlexSans-Medium.woff2") format("woff2");
+             font-weight:500; font-display:swap; }
+@font-face { font-family:"IBM Plex Sans"; src:url("fonts/IBMPlexSans-SemiBold.woff2") format("woff2");
+             font-weight:600; font-display:swap; }
+@font-face { font-family:"IBM Plex Mono"; src:url("fonts/IBMPlexMono-Regular.woff2") format("woff2");
+             font-weight:400; font-display:swap; }
+*/
+/* ---------------------------------------------------------------------------
+   The product is a chain: this PC -> gateway -> sign-in -> Tailscale -> the
+   public internet. Any broken link and nobody can connect. So the dashboard
+   is drawn as one continuous run with a visible break, rather than a grid of
+   independent cards that leaves the user to work out which failure matters.
+   --------------------------------------------------------------------------- */
+:root {
+  --paper:      #E8ECEF;  /* cool drafting paper, not cream */
+  --paper-rise: #F4F6F8;  /* raised surfaces */
+  --ink:        #0F2A33;  /* petrol ink */
+  --ink-soft:   #5A7079;
+  --ink-faint:  #9BABB2;
+  --rule:       #C6D0D6;
+
+  --live:       #10695A;  /* deep viridian: carrying signal */
+  --attention:  #B5471B;  /* burnt sienna: the path is cut */
+  --waiting:    #8A6A1F;  /* ochre: works, but not finished */
+
+  --gutter: 28px;
+  --radius: 3px;          /* near-square: this is instrumentation, not a card */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:      #0C1A20;
+    --paper-rise: #112730;
+    --ink:        #DCE6EA;
+    --ink-soft:   #8FA4AC;
+    --ink-faint:  #5A7079;
+    --rule:       #23414C;
+    --live:       #3FBFA3;
+    --attention:  #E8814F;
+    --waiting:    #D4A542;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:      #0C1A20;
+  --paper-rise: #112730;
+  --ink:        #DCE6EA;
+  --ink-soft:   #8FA4AC;
+  --ink-faint:  #5A7079;
+  --rule:       #23414C;
+  --live:       #3FBFA3;
+  --attention:  #E8814F;
+  --waiting:    #D4A542;
+}
+
+* { box-sizing: border-box; }
+
+/* The hidden attribute is only display:none in the UA stylesheet, so any
+   author rule setting display (.verdict is flex) silently outranks it. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 640px; margin: 0 auto; padding: 0 16px 48px; }
+
+/* --- top bar -------------------------------------------------------------- */
+
+.bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; padding: 18px 0 16px;
+  border-bottom: 1px solid var(--rule);
+}
+.wordmark { font-weight: 600; letter-spacing: -0.01em; }
+.verdict { display: flex; align-items: center; gap: 9px; font-weight: 500; }
+.verdict .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--live); }
+.verdict[data-state="attention"] .dot { background: var(--attention); }
+.verdict[data-state="waiting"]   .dot { background: var(--waiting); }
+.verdict[data-state="attention"] { color: var(--attention); }
+.verdict[data-state="waiting"]   { color: var(--waiting); }
+
+/* --- hero: the address is the product ------------------------------------- */
+
+.address { padding: 34px 0 30px; border-bottom: 1px solid var(--rule); }
+.address h1 {
+  margin: 0 0 4px;
+  font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  font-size: clamp(20px, 5.2vw, 29px);
+  font-weight: 500; letter-spacing: -0.02em; line-height: 1.2;
+  word-break: break-all;
+}
+.address .sub { color: var(--ink-soft); font-size: 14px; }
+.address .actions { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+
+button {
+  font: inherit; font-size: 14px; font-weight: 500;
+  padding: 8px 15px; border-radius: var(--radius); cursor: pointer;
+  border: 1px solid var(--ink); background: var(--ink); color: var(--paper);
+  transition: opacity .12s ease;
+}
+button:hover { opacity: .86; }
+button.ghost { background: transparent; color: var(--ink); border-color: var(--rule); }
+button.ghost:hover { border-color: var(--ink-soft); opacity: 1; }
+button:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+button[disabled] { opacity: .4; cursor: default; }
+
+/* --- the signal path ------------------------------------------------------ */
+
+.path { padding: 26px 0 0; }
+.path-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 14px; color: var(--ink-soft); font-size: 13px;
+}
+
+.link { position: relative; padding-left: var(--gutter); }
+
+/* The run is drawn by each link's own ::before, so a break is a property of
+   the link rather than a separately positioned decoration that could drift. */
+.link::before {
+  content: ""; position: absolute; left: 4px; top: 0; bottom: 0;
+  border-left: 2px solid var(--live);
+}
+.link:first-child::before { top: 18px; }
+.link:last-child::before  { bottom: calc(100% - 18px); }
+.link[data-state="attention"]::before,
+.link[data-state="severed"]::before { border-left-style: dotted; border-left-color: var(--attention); }
+.link[data-state="waiting"]::before { border-left-color: var(--waiting); }
+.link[data-state="unknown"]::before { border-left-color: var(--ink-faint); border-left-style: dotted; }
+
+.node {
+  position: absolute; left: 0; top: 13px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--paper); border: 2px solid var(--live);
+}
+.link[data-state="attention"] .node { border-color: var(--attention); background: var(--attention); }
+.link[data-state="waiting"]   .node { border-color: var(--waiting); }
+.link[data-state="unknown"]   .node { border-color: var(--ink-faint); }
+
+.link-body {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 14px; padding: 9px 0;
+}
+.link-name { font-weight: 500; }
+.link-value {
+  color: var(--ink-soft); font-size: 13.5px; text-align: right;
+  font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+}
+.link[data-state="attention"] .link-value { color: var(--attention); }
+.link[data-state="waiting"]   .link-value { color: var(--waiting); }
+
+/* Guidance appears only where the path is cut, at the point it is cut. */
+.fix {
+  margin: 2px 0 14px; padding: 13px 15px;
+  background: var(--paper-rise); border: 1px solid var(--rule);
+  border-left: 2px solid var(--attention);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.link[data-state="waiting"] .fix { border-left-color: var(--waiting); }
+.fix p { margin: 0 0 11px; font-size: 14px; color: var(--ink-soft); max-width: 62ch; }
+.fix p:last-child { margin-bottom: 0; }
+
+/* --- footer --------------------------------------------------------------- */
+
+.foot {
+  margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--rule);
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap;
+  color: var(--ink-faint); font-size: 13px;
+}
+.foot-actions { display: flex; gap: 8px; }
+
+/* --- first run ------------------------------------------------------------
+   The dashboard shows a route; setup shows a sequence. Numbering is used here
+   and nowhere else, because here the order is the information. */
+
+.intro { padding: 36px 0 26px; }
+.intro h1 { margin: 0 0 8px; font-size: clamp(22px, 5vw, 30px); font-weight: 600;
+  letter-spacing: -0.02em; line-height: 1.15; }
+.intro p { margin: 0; color: var(--ink-soft); max-width: 54ch; }
+
+.steps { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.step { display: grid; grid-template-columns: 30px 1fr; gap: 14px;
+  padding: 18px 0; border-bottom: 1px solid var(--rule); }
+
+.step-num {
+  width: 24px; height: 24px; border-radius: 50%; margin-top: 1px;
+  display: grid; place-items: center;
+  font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--rule); color: var(--ink-faint); background: transparent;
+}
+.step[data-state="current"] .step-num { border-color: var(--ink); color: var(--paper); background: var(--ink); }
+.step[data-state="done"] .step-num { border-color: var(--live); color: var(--live); }
+
+.step-title { font-weight: 500; }
+.step[data-state="todo"] .step-title { color: var(--ink-faint); }
+.step-note { margin: 4px 0 0; color: var(--ink-soft); font-size: 14px; max-width: 58ch; }
+.step-note code {
+  font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  font-size: 12.5px; background: var(--paper-rise);
+  border: 1px solid var(--rule); border-radius: var(--radius); padding: 1px 5px;
+  word-break: break-all;
+}
+.step-actions { margin-top: 13px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.targets { margin: 12px 0 0; display: grid; gap: 8px; }
+.target {
+  display: flex; align-items: center; gap: 10px; padding: 10px 13px;
+  background: var(--paper-rise); border: 1px solid var(--rule);
+  border-radius: var(--radius); cursor: pointer;
+}
+.target input { accent-color: var(--live); width: 15px; height: 15px; }
+.target-name { font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  font-size: 13.5px; }
+.target-note { margin-left: auto; color: var(--ink-faint); font-size: 12.5px; }
+
+.add-target { display: flex; gap: 8px; margin-top: 8px; }
+.add-target input[type="text"] {
+  flex: 1; font: inherit; font-size: 14px; padding: 8px 11px; color: var(--ink);
+  background: var(--paper-rise); border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.add-target input:focus-visible { outline: 2px solid var(--live); outline-offset: 1px; }
+
+.progress { margin: 12px 0 0; display: grid; gap: 6px; }
+.progress-row { display: flex; gap: 10px; align-items: baseline; font-size: 14px; }
+.progress-row .mark { width: 14px; color: var(--ink-faint); flex: none; }
+.progress-row[data-state="done"] .mark { color: var(--live); }
+.progress-row[data-state="failed"] { color: var(--attention); }
+.progress-row[data-state="failed"] .mark { color: var(--attention); }
+.progress-row .msg { color: var(--ink-soft); margin-left: auto; text-align: right;
+  font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  font-size: 12.5px; }
+
+.handover {
+  margin-top: 14px; padding: 15px 17px; border: 1px solid var(--rule);
+  border-left: 2px solid var(--live); background: var(--paper-rise);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.handover dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 16px; }
+.handover dt { color: var(--ink-soft); font-size: 13.5px; }
+.handover dd { margin: 0; font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  font-size: 13.5px; word-break: break-all; }
+.handover .warn { margin: 12px 0 0; font-size: 13.5px; color: var(--attention); }
+
+
+.choices { margin: 12px 0 0; display: grid; gap: 8px; }
+.choice {
+  display: grid; grid-template-columns: 18px 1fr; gap: 3px 12px; padding: 12px 14px;
+  background: var(--paper-rise); border: 1px solid var(--rule);
+  border-radius: var(--radius); cursor: pointer;
+}
+.choice:has(input:checked) { border-color: var(--ink); box-shadow: inset 2px 0 0 var(--ink); }
+.choice input { accent-color: var(--ink); margin-top: 3px; }
+.choice-title { font-weight: 500; }
+.choice-text { grid-column: 2; color: var(--ink-soft); font-size: 13.5px; max-width: 60ch; }
+.choice-cost { grid-column: 2; font-size: 12.5px; color: var(--ink-faint); }
+
+.fields { margin: 12px 0 0; display: grid; gap: 10px; max-width: 460px; }
+.field { display: grid; gap: 4px; }
+.field > span { font-size: 13.5px; color: var(--ink-soft); }
+.field input[type="text"], .field input[type="password"] {
+  font: inherit; font-size: 14px; padding: 8px 11px; color: var(--ink);
+  background: var(--paper-rise); border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.field input:focus-visible { outline: 2px solid var(--live); outline-offset: 1px; }
+.field small { color: var(--ink-faint); font-size: 12.5px; }
+
+.verdict-box { margin: 12px 0 0; padding: 11px 14px; border: 1px solid var(--rule);
+  border-left-width: 2px; background: var(--paper-rise); font-size: 14px; max-width: 60ch;
+  border-radius: 0 var(--radius) var(--radius) 0; }
+.verdict-box[data-state="ok"]   { border-left-color: var(--live); }
+.verdict-box[data-state="bad"]  { border-left-color: var(--attention); }
+.verdict-box[data-state="meh"]  { border-left-color: var(--waiting); }
+
+details.guide { margin: 12px 0 0; border-top: 1px solid var(--rule); padding-top: 10px; max-width: 62ch; }
+details.guide summary { cursor: pointer; font-weight: 500; }
+details.guide ol { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 9px;
+  color: var(--ink-soft); font-size: 14px; }
+details.guide li b { color: var(--ink); font-weight: 500; }
+pre.script { margin: 10px 0 0; max-height: 150px; overflow: auto; padding: 10px 12px; font-size: 12px;
+  background: var(--paper-rise); border: 1px solid var(--rule); border-radius: var(--radius);
+  font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace; }
+
+.spin { display: inline-block; width: 11px; height: 11px; border-radius: 50%;
+  border: 2px solid var(--ink-faint); border-top-color: transparent;
+  animation: rot .7s linear infinite; vertical-align: -1px; }
+@keyframes rot { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="bar">
+    <span class="wordmark">RD Gateway</span>
+    <span class="verdict" id="verdict" hidden><span class="dot"></span><span id="verdict-text">Checking</span></span>
+  </header>
+
+  <!-- First run. Steps are genuinely sequential, so they are numbered; the
+       dashboard's path is not a sequence and deliberately is not. -->
+  <main id="wizard" hidden>
+    <section class="intro">
+      <h1>Let's make this PC reachable</h1>
+      <p>You can close this and come back &mdash; it picks up where you left off.</p>
+    </section>
+    <ol class="steps" id="steps"></ol>
+  </main>
+
+  <main id="dashboard" hidden>
+  <section class="address">
+    <h1 id="hostname">&mdash;</h1>
+    <div class="sub" id="address-sub">Looking for your machine</div>
+    <div class="actions">
+      <button id="open-portal">Open portal</button>
+      <button class="ghost" id="copy-address">Copy address</button>
+    </div>
+  </section>
+
+  <section class="path">
+    <div class="path-head">
+      <span>From this PC to the internet</span>
+      <span id="checked-at"></span>
+    </div>
+    <div id="links"></div>
+  </section>
+
+  <footer class="foot">
+    <span id="foot-note"></span>
+    <span class="foot-actions">
+      <button class="ghost" id="recheck">Check again</button>
+      <button class="ghost" id="settings">Settings</button>
+    </span>
+  </footer>
+  </main>
+
+</div>
+
+<script>
+// The backend hands over the same Status struct the CLI prints. Order here is
+// the physical order of the path, which is not the order the checks happen to
+// run in - the user reads a route, not a task list.
+const PATH_ORDER = [
+  "Remote Desktop", "Gateway service", "Sign-in service",
+  "Two-factor", "Tailscale", "Public address",
+];
+
+// Plain-language names. The backend speaks in service names because that is
+// what its logs say; the person at the keyboard should not have to.
+const LABELS = {
+  "Remote Desktop":  "Remote Desktop on this PC",
+  "Gateway service": "Gateway",
+  "Sign-in service": "Sign-in",
+  "Two-factor":      "Two-factor",
+  "Tailscale":       "Tailscale",
+  "Public address":  "Reachable from the internet",
+};
+
+// Each fixable problem gets one button that does the obvious thing, so the
+// user is never told what is wrong without being offered the way out.
+const REMEDIES = {
+  "Remote Desktop": { label: "Open Remote Desktop settings", call: "OpenRDPSettings" },
+  "Tailscale":      { label: "Sign in to Tailscale",         call: "TailscaleLogin" },
+  "Public address": { label: "Publish again",                call: "EnableFunnel" },
+  "Two-factor":     { label: "Set up two-factor",            call: "OpenTwoFactor" },
+  "Gateway service":{ label: "Restart gateway",              call: "RestartGateway" },
+  "Sign-in service":{ label: "Restart sign-in",              call: "RestartSignIn" },
+};
+
+const state = { status: null, busy: false, door: "funnel" };
+
+// What the fix button for the public address does depends on how the gateway
+// is reached: republishing means nothing for a relay, where the useful thing
+// is to hand over the server script again.
+function remedyFor(name) {
+  if (name === "Public address") {
+    if (state.door === "relay")
+      return { label: "Copy the server script", call: "RelayScript", copy: true };
+    if (state.door === "direct")
+      return { label: "Test it now", call: "TestPublic" };
+  }
+  return REMEDIES[name];
+}
+
+// NOT named "go": a top-level `function go()` declaration creates a global
+// binding that overwrites the window.go object Wails injects, after which
+// every backend call silently fails. Found by running it, not by reading it.
+function callBackend(name, ...args) {
+  const fn = window.go?.main?.App?.[name];
+  return fn ? fn(...args) : Promise.reject(new Error(name + " unavailable"));
+}
+
+function severity(checks) {
+  if (checks.some(c => c.state === "fail")) return "attention";
+  if (checks.some(c => c.state === "warn" || c.state === "unknown")) return "waiting";
+  return "live";
+}
+
+function render(status) {
+  state.status = status;
+  const checks = [...(status.checks || [])].sort(
+    (a, b) => PATH_ORDER.indexOf(a.name) - PATH_ORDER.indexOf(b.name));
+
+  const worst = severity(checks);
+  const verdict = document.getElementById("verdict");
+  verdict.dataset.state = worst === "live" ? "" : worst;
+  document.getElementById("verdict-text").textContent =
+    worst === "live" ? "Reachable" : worst === "attention" ? "Not reachable" : "Needs a moment";
+
+  document.getElementById("hostname").textContent = status.hostname || "Not set up yet";
+  document.getElementById("address-sub").textContent =
+    worst === "live"
+      ? "Anyone you give this address to can reach the sign-in page."
+      : "This address will work once the path below is unbroken.";
+
+  const portal = document.getElementById("open-portal");
+  portal.disabled = !status.hostname || worst === "attention";
+  document.getElementById("copy-address").disabled = !status.hostname;
+
+  // Everything after the first break is unreachable regardless of its own
+  // state, so it is drawn as severed rather than as a second failure. One
+  // problem should look like one problem.
+  let broken = false;
+  const host = document.getElementById("links");
+  host.textContent = "";
+
+  for (const c of checks) {
+    const el = document.createElement("div");
+    el.className = "link";
+    const own = c.state === "fail" ? "attention"
+              : c.state === "warn" ? "waiting"
+              : c.state === "unknown" ? "unknown" : "ok";
+    el.dataset.state = broken && own === "ok" ? "severed" : own;
+    if (own === "attention") broken = true;
+
+    const node = document.createElement("span");
+    node.className = "node";
+    el.appendChild(node);
+
+    const body = document.createElement("div");
+    body.className = "link-body";
+    const name = document.createElement("span");
+    name.className = "link-name";
+    name.textContent = LABELS[c.name] || c.name;
+    const value = document.createElement("span");
+    value.className = "link-value";
+    value.textContent = c.detail || "";
+    body.append(name, value);
+    el.appendChild(body);
+
+    if (c.hint && own !== "ok") {
+      const fix = document.createElement("div");
+      fix.className = "fix";
+      const p = document.createElement("p");
+      p.textContent = c.hint;
+      fix.appendChild(p);
+      const r = remedyFor(c.name);
+      if (r) {
+        const b = document.createElement("button");
+        b.textContent = r.label;
+        b.addEventListener("click", () => act(b, r));
+        fix.appendChild(b);
+      }
+      el.appendChild(fix);
+    }
+    host.appendChild(el);
+  }
+
+  document.getElementById("checked-at").textContent =
+    status.checkedAt ? "checked " + timeAgo(new Date(status.checkedAt)) : "";
+  document.getElementById("foot-note").textContent =
+    worst === "live" ? "Everything is running." : "";
+}
+
+async function act(button, remedy) {
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = "Working…";
+  try {
+    const out = await callBackend(remedy.call);
+    if (remedy.copy && typeof out === "string") {
+      await navigator.clipboard.writeText(out);
+      button.textContent = "Copied";
+      setTimeout(() => { button.textContent = original; button.disabled = false; }, 1800);
+      return;
+    }
+    await refresh();
+  } catch (err) {
+    button.textContent = "Could not do that";
+    console.warn(remedy.call, err);
+    setTimeout(() => { button.textContent = original; button.disabled = false; }, 2500);
+  }
+}
+
+function timeAgo(d) {
+  const s = Math.max(0, (Date.now() - d.getTime()) / 1000);
+  if (s < 45) return "just now";
+  if (s < 90) return "a minute ago";
+  return Math.round(s / 60) + " minutes ago";
+}
+
+async function refresh() {
+  if (state.busy) return;
+  state.busy = true;
+  const btn = document.getElementById("recheck");
+  const prev = btn.textContent;
+  btn.innerHTML = '<span class="spin"></span>';
+  try {
+    try { state.door = (await callBackend("GetSettings")).door || "funnel"; } catch {}
+    render(await callBackend("Status"));
+  } catch (err) {
+    console.warn("status unavailable", err);
+  } finally {
+    btn.textContent = prev;
+    state.busy = false;
+  }
+}
+
+document.getElementById("recheck").addEventListener("click", refresh);
+document.getElementById("open-portal").addEventListener("click", () => callBackend("OpenPortal"));
+document.getElementById("settings").addEventListener("click", () => callBackend("OpenSettings"));
+document.getElementById("copy-address").addEventListener("click", async (e) => {
+  const url = state.status?.portalUrl || "";
+  try { await navigator.clipboard.writeText(url); } catch { return; }
+  const b = e.currentTarget;
+  b.textContent = "Copied";
+  setTimeout(() => (b.textContent = "Copy address"), 1600);
+});
+
+/* ===========================================================================
+   First run
+   =========================================================================== */
+
+const wiz = {
+  door: null,                 // chosen on the first screen
+  form: { domain: "", email: "", ddns: "duck", duckName: "", duckToken: "", ddnsUrl: "" },
+  directCheck: null, directAck: false, addressOk: false,
+  targets: [], installing: false, result: null, progress: [],
+};
+
+const DOORS = [
+  { id: "funnel", title: "Tailscale Funnel",
+    text: "The quickest way: a few clicks and it works, even on internet connections that cannot be " +
+          "reached directly. The address ends in .ts.net, which some company networks block.",
+    cost: "Free. No server, no domain." },
+  { id: "direct", title: "Straight to this PC",
+    text: "Your router sends the traffic here, and a free name service keeps the address current. " +
+          "Simple and fast, but it only works if your internet provider gives you your own public address.",
+    cost: "Free. The app checks whether your connection allows it." },
+  { id: "relay", title: "Through a small server of your own",
+    text: "A tiny free server holds your domain name and passes traffic to this PC. Works on any " +
+          "connection, opens nothing on your router, and the address looks like any ordinary website.",
+    cost: "Free server (Oracle), a domain is about $10 a year. About 20 minutes, once." },
+];
+
+// The path through the wizard depends on the way chosen. Each step says for
+// itself whether it is finished, so the current step is whatever comes first
+// and is not - closing the window and reopening it resumes in the right place.
+function wizardSteps(w) {
+  const door = wiz.door;
+  const steps = [{ title: "Choose how to reach it", done: () => !!door, build: () => buildDoor(w) }];
+  if (!door) return steps;
+
+  if (door === "direct") {
+    steps.push({ title: "Check your connection", done: () => wiz.directAck, build: () => buildDirectCheck(w) });
+  } else {
+    steps.push({ title: "Connect Tailscale",
+      done: () => w.tailscaleInstalled && w.signedIn, build: () => buildTailscale(w) });
+  }
+  if (door !== "funnel") {
+    steps.push({ title: door === "direct" ? "Pick your address" : "Your domain name",
+      done: () => wiz.addressOk, build: () => buildAddress(w) });
+  }
+  steps.push({ title: "Add the gateway program", done: () => w.rdpgwPresent, build: () => buildRdpgw(w) });
+  steps.push({ title: "Choose what to reach", done: () => !!wiz.result, build: () => buildTargets(w) });
+  steps.push({ title: door === "relay" ? "Set up the server" : "Finish setting up",
+    done: () => false, build: () => buildFinish(w) });
+  return steps;
+}
+
+function renderWizard(w) {
+  const steps = wizardSteps(w);
+  let cur = steps.findIndex(s => !s.done());
+  if (cur < 0) cur = steps.length - 1;
+  const host = document.getElementById("steps");
+  host.textContent = "";
+
+  steps.forEach((s, i) => {
+    const li = document.createElement("li");
+    li.className = "step";
+    li.dataset.state = i < cur ? "done" : i === cur ? "current" : "todo";
+
+    const num = document.createElement("span");
+    num.className = "step-num";
+    num.textContent = i < cur ? "✓" : String(i + 1);
+
+    const body = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "step-title";
+    title.textContent = s.title;
+    body.appendChild(title);
+
+    // Only the step in hand is expanded. Showing every step's detail at once
+    // is how a setup starts to feel like a form.
+    if (i === cur) {
+      const detail = s.build();
+      if (detail) body.appendChild(detail);
+    }
+
+    li.append(num, body);
+    host.appendChild(li);
+  });
+}
+
+function note(html) {
+  const p = document.createElement("p");
+  p.className = "step-note";
+  p.innerHTML = html;
+  return p;
+}
+
+function actions(...buttons) {
+  const d = document.createElement("div");
+  d.className = "step-actions";
+  buttons.forEach(b => b && d.appendChild(b));
+  return d;
+}
+
+function button(label, onClick, ghost) {
+  const b = document.createElement("button");
+  if (ghost) b.className = "ghost";
+  b.textContent = label;
+  b.addEventListener("click", () => onClick(b));
+  return b;
+}
+
+function buildDoor(w) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(note("Pick how people will reach your gateway from outside. " +
+    "You can change your mind later by running setup again."));
+  const list = document.createElement("div");
+  list.className = "choices";
+  let picked = wiz.door || "funnel";
+  DOORS.forEach(d => {
+    const row = document.createElement("label");
+    row.className = "choice";
+    const r = document.createElement("input");
+    r.type = "radio"; r.name = "door"; r.checked = d.id === picked;
+    r.addEventListener("change", () => { picked = d.id; });
+    const t = document.createElement("span"); t.className = "choice-title"; t.textContent = d.title;
+    const x = document.createElement("span"); x.className = "choice-text"; x.textContent = d.text;
+    const c = document.createElement("span"); c.className = "choice-cost"; c.textContent = d.cost;
+    row.append(r, t, x, c);
+    list.appendChild(row);
+  });
+  frag.appendChild(list);
+  frag.appendChild(actions(button("Continue", () => { wiz.door = picked; renderWizard(w); })));
+  return frag;
+}
+
+function buildDirectCheck(w) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(note("Before going further, the app asks your router what address it has. " +
+    "Some providers share one address between many customers, and that cannot work this way."));
+  const out = document.createElement("div");
+  frag.appendChild(out);
+
+  const show = (c) => {
+    out.textContent = "";
+    const box = document.createElement("div");
+    box.className = "verdict-box";
+    box.dataset.state = c.routerFound ? (c.public ? "ok" : "bad") : "meh";
+    box.textContent = c.reason;
+    out.appendChild(box);
+    const btns = [];
+    if (!c.routerFound || c.public) {
+      btns.push(button("Continue", () => { wiz.directAck = true; renderWizard(w); }));
+    } else {
+      btns.push(button("Choose another way", () => { wiz.door = null; wiz.directCheck = null; renderWizard(w); }));
+    }
+    out.appendChild(actions(...btns));
+  };
+
+  if (wiz.directCheck) { show(wiz.directCheck); return frag; }
+  frag.appendChild(actions(button("Check my connection", async (b) => {
+    b.disabled = true; b.textContent = "Checking…";
+    try { wiz.directCheck = await callBackend("CheckDirect"); }
+    catch (e) { wiz.directCheck = { routerFound: false, public: false, reason: String(e?.message || e) }; }
+    renderWizard(w);
+  })));
+  return frag;
+}
+
+function field(label, key, opts = {}) {
+  const wrap = document.createElement("label");
+  wrap.className = "field";
+  const sp = document.createElement("span"); sp.textContent = label;
+  const inp = document.createElement("input");
+  inp.type = opts.secret ? "password" : "text";
+  inp.placeholder = opts.placeholder || "";
+  inp.value = wiz.form[key] || "";
+  inp.autocomplete = "off"; inp.spellcheck = false;
+  // No re-render on input: that would throw away focus on every keystroke.
+  inp.addEventListener("input", () => { wiz.form[key] = inp.value.trim(); });
+  wrap.append(sp, inp);
+  if (opts.help) { const sm = document.createElement("small"); sm.textContent = opts.help; wrap.appendChild(sm); }
+  return wrap;
+}
+
+function buildAddress(w) {
+  const frag = document.createDocumentFragment();
+  const fields = document.createElement("div");
+  fields.className = "fields";
+  const err = document.createElement("div");
+  err.className = "verdict-box"; err.dataset.state = "bad"; err.hidden = true;
+
+  if (wiz.door === "relay") {
+    frag.appendChild(note("This is the address people will type. Buy one at any registrar " +
+      "(around $10 a year), or use a subdomain of a domain you already own, such as " +
+      "<code>rdgw.yourdomain.com</code>."));
+    fields.append(
+      field("Domain name", "domain", { placeholder: "rdgw.example.com" }),
+      field("Email for certificate notices (optional)", "email", { placeholder: "you@example.com" }));
+  } else {
+    frag.appendChild(note("Your home address changes now and then, so a name service keeps a " +
+      "fixed name pointing at it. DuckDNS is free; sign in at duckdns.org, create a name, and copy the token shown at the top."));
+    const duck = field("DuckDNS name", "duckName", { placeholder: "myhome", help: "Just the part before .duckdns.org" });
+    const tok = field("DuckDNS token", "duckToken", { secret: true });
+    const own = document.createElement("details");
+    own.className = "guide";
+    const sm = document.createElement("summary"); sm.textContent = "I have my own domain or another provider";
+    own.appendChild(sm);
+    const f2 = document.createElement("div"); f2.className = "fields";
+    f2.append(
+      field("Your address", "domain", { placeholder: "rdgw.example.com" }),
+      field("Update link from your provider (optional)", "ddnsUrl",
+        { secret: true, help: "Starts with https://. Leave empty if your address never changes." }));
+    own.appendChild(f2);
+    fields.append(duck, tok, own,
+      field("Email for certificate notices (optional)", "email", { placeholder: "you@example.com" }));
+    frag.appendChild(note("DuckDNS names are widely recognised by company web filters. " +
+      "If this PC's network is filtered, your own domain is the safer choice."));
+  }
+  frag.append(fields, err);
+
+  frag.appendChild(actions(button("Continue", () => {
+    const f = wiz.form;
+    const usingDuck = wiz.door === "direct" && f.duckName && !f.domain;
+    if (wiz.door === "relay" && !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(f.domain)) {
+      err.textContent = "Enter a full domain name, like rdgw.example.com."; err.hidden = false; return;
+    }
+    if (wiz.door === "direct" && !usingDuck && !f.domain) {
+      err.textContent = "Enter a DuckDNS name, or your own address."; err.hidden = false; return;
+    }
+    if (usingDuck && !f.duckToken) {
+      err.textContent = "Paste the DuckDNS token as well."; err.hidden = false; return;
+    }
+    wiz.addressOk = true; renderWizard(w);
+  })));
+  return frag;
+}
+
+function buildTailscale(w) {
+  const frag = document.createDocumentFragment();
+  if (!w.tailscaleInstalled) {
+    frag.appendChild(note(wiz.door === "relay"
+      ? "Tailscale is the private link between this PC and your server. Nothing is opened on your router."
+      : "Tailscale gives this PC an address the outside world can reach, without opening a port on your router."));
+    frag.appendChild(actions(button("Install Tailscale", async (b) => {
+      b.disabled = true; b.textContent = "Installing…";
+      try { await callBackend("InstallTailscale"); } catch (e) { console.warn(e); }
+      pollWizard();
+    })));
+  } else {
+    frag.appendChild(note("Tailscale is installed. Sign in to get this PC its address."));
+    frag.appendChild(actions(button("Sign in to Tailscale", async (b) => {
+      b.disabled = true; b.textContent = "Waiting for sign-in…";
+      try { await callBackend("TailscaleLogin"); } catch (e) { console.warn(e); }
+      pollWizard();
+    })));
+  }
+  return frag;
+}
+
+function buildRdpgw(w) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(note(
+    "The gateway program is not published as a ready-made download, so it has " +
+    "to be built once and copied to:<br><code>" + escapeHTML(w.rdpgwExpectedAt) + "</code>"));
+  frag.appendChild(note(
+    "Build it with:<br><code>GOOS=windows GOARCH=amd64 go build -o rdpgw.exe ./cmd/rdpgw</code>"));
+  frag.appendChild(actions(button("I've copied it", () => pollWizard(), true)));
+  return frag;
+}
+
+function buildTargets(w) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(note(
+    "Only the computers you list here can be reached through the gateway. " +
+    "Everything else is refused."));
+
+  if (wiz.targets.length === 0 && w.thisMachine) {
+    wiz.targets = [{ addr: w.thisMachine + ":3389", on: true, note: "this PC" }];
+  }
+
+  const list = document.createElement("div");
+  list.className = "targets";
+  wiz.targets.forEach((t, i) => {
+    const row = document.createElement("label");
+    row.className = "target";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = t.on;
+    cb.addEventListener("change", () => { wiz.targets[i].on = cb.checked; });
+    const name = document.createElement("span");
+    name.className = "target-name";
+    name.textContent = t.addr;
+    row.append(cb, name);
+    if (t.note) {
+      const n = document.createElement("span");
+      n.className = "target-note";
+      n.textContent = t.note;
+      row.appendChild(n);
+    }
+    list.appendChild(row);
+  });
+  frag.appendChild(list);
+
+  const add = document.createElement("div");
+  add.className = "add-target";
+  const input = document.createElement("input");
+  input.type = "text";
+  input.placeholder = "another-pc:3389";
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") addBtn.click(); });
+  const addBtn = button("Add", () => {
+    const v = input.value.trim();
+    if (!v) return;
+    wiz.targets.push({ addr: v.includes(":") ? v : v + ":3389", on: true });
+    input.value = "";
+    renderWizard(w);
+  }, true);
+  add.append(input, addBtn);
+  frag.appendChild(add);
+
+  frag.appendChild(actions(button("Set it up", () => startInstall(w))));
+
+  if (wiz.progress.length) frag.appendChild(progressList());
+  return frag;
+}
+
+function progressList() {
+  const d = document.createElement("div");
+  d.className = "progress";
+  for (const e of wiz.progress) {
+    const row = document.createElement("div");
+    row.className = "progress-row";
+    row.dataset.state = e.state;
+    const mark = document.createElement("span");
+    mark.className = "mark";
+    mark.textContent = e.state === "done" ? "✓"
+                     : e.state === "failed" ? "✕"
+                     : e.state === "skipped" ? "–" : "·";
+    const name = document.createElement("span");
+    name.textContent = e.step;
+    const msg = document.createElement("span");
+    msg.className = "msg";
+    msg.textContent = e.message || "";
+    row.append(mark, name, msg);
+    d.appendChild(row);
+  }
+  return d;
+}
+
+async function startInstall(w) {
+  if (wiz.installing) return;
+  wiz.installing = true;
+  wiz.progress = [];
+
+  try {
+    const f = wiz.form;
+    wiz.result = await callBackend("RunInstall", {
+      door: wiz.door,
+      targets: wiz.targets.filter(t => t.on).map(t => t.addr),
+      domain: f.domain, email: f.email,
+      duckName: wiz.door === "direct" ? f.duckName : "",
+      duckToken: f.duckToken, ddnsUrl: f.ddnsUrl,
+    });
+    renderWizard(w);
+  } catch (err) {
+    wiz.progress.push({ step: "Setup stopped", state: "failed", message: String(err?.message || err) });
+    renderWizard(w);
+  } finally {
+    wiz.installing = false;
+  }
+}
+
+function buildFinish(w) {
+  const frag = document.createDocumentFragment();
+  const r = wiz.result;
+  if (!r) return frag;
+
+  frag.appendChild(note(
+    "This PC is ready. Set up your authenticator app now &mdash; the portal will not " +
+    "let anyone in until you do."));
+
+  const box = document.createElement("div");
+  box.className = "handover";
+  const dl = document.createElement("dl");
+  for (const [k, v] of [
+    ["Address", r.config.publicDomain || r.config.hostname],
+    ["Username", r.config.adminUser],
+    ["Password", r.adminPassword],
+  ]) {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.textContent = v;
+    dl.append(dt, dd);
+  }
+  box.appendChild(dl);
+  const warn = document.createElement("p");
+  warn.className = "warn";
+  warn.textContent = "Write the password down now. It is shown once and not stored.";
+  box.appendChild(warn);
+  frag.appendChild(box);
+
+  if (wiz.door === "relay") frag.appendChild(relayGuide(r));
+  if (wiz.door === "direct") {
+    frag.appendChild(note("The app asked your router to forward port 443 here and will keep " +
+      "<code>" + escapeHTML(r.config.publicDomain) + "</code> up to date. If your router has UPnP " +
+      "switched off, forward TCP port 443 to this PC in its settings. To confirm it works, " +
+      "open the address from a phone on mobile data."));
+  }
+
+  frag.appendChild(actions(
+    button("Set up two-factor", () => callBackend("OpenTwoFactor")),
+    button("Go to the dashboard", () => { wiz.result = null; boot(); }, true),
+  ));
+  return frag;
+}
+
+// The server is the one part the app cannot do on its own, so it is walked
+// through in the order a person would actually do it, with the one script they
+// need ready to copy.
+function relayGuide(r) {
+  const wrap = document.createElement("div");
+  wrap.appendChild(note("<b>One more thing: the server.</b> It takes about 20 minutes the first time."));
+
+  const g = document.createElement("details");
+  g.className = "guide"; g.open = true;
+  const sm = document.createElement("summary"); sm.textContent = "Step by step";
+  g.appendChild(sm);
+  const ol = document.createElement("ol");
+  const domain = escapeHTML(r.config.publicDomain);
+  [
+    "<b>Get a free server.</b> Create an Oracle Cloud account (the &ldquo;Always Free&rdquo; tier needs a card " +
+      "for verification and is not charged). Create a virtual machine with <b>Ubuntu</b>, and keep its public address.",
+    "<b>Open the web ports.</b> In Oracle&rsquo;s console go to the machine&rsquo;s network, then Security Lists, " +
+      "and add an ingress rule from <code>0.0.0.0/0</code> for TCP ports <code>80</code> and <code>443</code>.",
+    "<b>Point your domain at it.</b> At your domain provider add an <code>A</code> record: " +
+      "<code>" + domain + "</code> &rarr; the server&rsquo;s public address.",
+    "<b>Run the script.</b> Connect to the server with SSH, paste the script below, and sign in to Tailscale " +
+      "with the <b>same account as this PC</b> when it shows a link.",
+    "<b>Test it.</b> Press the button below. A green result means the whole path works.",
+  ].forEach(h => { const li = document.createElement("li"); li.innerHTML = h; ol.appendChild(li); });
+  g.appendChild(ol);
+
+  const pre = document.createElement("pre");
+  pre.className = "script";
+  pre.textContent = r.relayScript || "";
+  g.appendChild(pre);
+
+  const out = document.createElement("div");
+  g.appendChild(actions(
+    button("Copy the script", async (b) => {
+      try { await navigator.clipboard.writeText(r.relayScript || ""); b.textContent = "Copied"; } catch {}
+      setTimeout(() => (b.textContent = "Copy the script"), 1800);
+    }),
+    button("Test the relay", async (b) => {
+      b.disabled = true; b.textContent = "Testing…";
+      out.textContent = "";
+      try {
+        const c = await callBackend("TestPublic");
+        const box = document.createElement("div");
+        box.className = "verdict-box";
+        box.dataset.state = c.state === "ok" ? "ok" : c.state === "warn" ? "meh" : "bad";
+        box.textContent = c.detail + (c.hint ? " — " + c.hint : "");
+        out.appendChild(box);
+      } catch (e) { out.textContent = String(e?.message || e); }
+      b.disabled = false; b.textContent = "Test the relay";
+    }, true),
+  ));
+  g.appendChild(out);
+  wrap.appendChild(g);
+  return wrap;
+}
+
+function escapeHTML(s) {
+  const d = document.createElement("div");
+  d.textContent = s ?? "";
+  return d.innerHTML;
+}
+
+let wizardPoll = null;
+async function pollWizard() {
+  try {
+    const w = await callBackend("Wizard");
+    renderWizard(w);
+    if (!wizardPoll) wizardPoll = setInterval(pollWizard, 3000);
+  } catch (err) {
+    console.warn("wizard state unavailable", err);
+  }
+}
+
+/* ===========================================================================
+   Boot
+   =========================================================================== */
+
+let dashboardPoll = null;
+
+function show(which) {
+  document.getElementById("wizard").hidden = which !== "wizard";
+  document.getElementById("dashboard").hidden = which !== "dashboard";
+  document.getElementById("verdict").hidden = which !== "dashboard";
+}
+
+async function boot() {
+  let configured = false;
+  try { configured = await callBackend("Configured"); } catch { configured = false; }
+
+  if (configured) {
+    show("dashboard");
+    if (wizardPoll) { clearInterval(wizardPoll); wizardPoll = null; }
+    refresh();
+    if (!dashboardPoll) dashboardPoll = setInterval(refresh, 15000);
+  } else {
+    show("wizard");
+    if (dashboardPoll) { clearInterval(dashboardPoll); dashboardPoll = null; }
+    pollWizard();
+  }
+}
+
+// Live progress during installation, emitted per step by the backend.
+window.runtime?.EventsOn?.("install:step", (e) => {
+  const existing = wiz.progress.find(p => p.step === e.step);
+  if (existing) { existing.state = e.state; existing.message = e.message; }
+  else wiz.progress.push({ step: e.step, state: e.state, message: e.message });
+  const host = document.querySelector(".progress");
+  if (host) host.replaceWith(progressList());
+});
+
+window.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>

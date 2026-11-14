@@ -1,0 +1,14 @@
+# Secrets and per-machine state. config.json holds the OIDC secret and admin token.
+config.json
+*.log
+RDGHelper.ini
+
+# Build output
+build/
+dist/
+*.exe
+*.zip
+*.tar.gz
+rdpgw/
+gitea/
+caddy/
