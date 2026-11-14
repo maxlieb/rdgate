@@ -206,6 +206,10 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 		report.step("Starting gateway", StepFailed, err.Error())
 		return nil, err
 	}
+	if err := EnsureGatewayTemplates(rdpgwDir); err != nil {
+		report.step("Starting gateway", StepFailed, err.Error())
+		return nil, err
+	}
 
 	report.step("Starting gateway", StepRunning, "")
 	if err := RegisterGateway(ctx, c.InstallRoot); err != nil {
@@ -370,6 +374,9 @@ func RepairGateway(ctx context.Context, c Config) error {
 		return err
 	}
 	if err := os.WriteFile(winJoin(rdpgwDir, "rdpgw.yaml"), []byte(yaml), 0o600); err != nil {
+		return err
+	}
+	if err := EnsureGatewayTemplates(rdpgwDir); err != nil {
 		return err
 	}
 	if err := RegisterGateway(ctx, c.InstallRoot); err != nil {

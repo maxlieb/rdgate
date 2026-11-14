@@ -65,7 +65,8 @@ jobs:
           path: |
             build/rdpgw.exe
             build/rdpgw-LICENSE.txt
-          key: rdpgw-${{ env.RDPGW_SHA }}
+            build/rdpgw-templates
+          key: rdpgw-v2-${{ env.RDPGW_SHA }}
       - name: Build the gateway program (rdpgw, Apache-2.0)
         # Only runs when the cache misses, i.e. when the pinned commit changes.
         if: steps.rdpgw-cache.outputs.cache-hit != 'true'
@@ -77,6 +78,8 @@ jobs:
           go build -mod=mod -o ..\build\rdpgw.exe ./cmd/rdpgw
           Pop-Location
           Copy-Item rdpgw-src\LICENSE build\rdpgw-LICENSE.txt
+          # The gateway serves its web pages from a templates folder beside rdpgw.exe.
+          Copy-Item -Recurse -Force rdpgw-src\templates build\rdpgw-templates
 
       - name: Fetch Git (MinGit, GPL-2.0) for the installer
         # Pinned like Wails and rdpgw, so a new upstream release cannot break the build.

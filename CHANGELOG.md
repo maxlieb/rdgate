@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.30
+
+- The gateway's web pages ship with the installer and are copied into place on setup and on Repair. Without them the sign-in page showed a bare fallback with a disabled server list.
+
 ## 0.1.29
 
 - The public-address check recognises the TCP Funnel the app publishes. Before, a working Funnel was reported as "not published".
