@@ -410,6 +410,13 @@ func (a *App) TailscaleLogin() (string, error) {
 	}
 }
 
+// loginResult is what the sign-in goroutine reports back: an address to open,
+// an error, or neither when the node was already signed in.
+type loginResult struct {
+	url string
+	err error
+}
+
 // findLoginURL returns the sign-in address on a line of `tailscale up` output.
 func findLoginURL(line string) string {
 	i := strings.Index(line, "https://login.tailscale.com/")
