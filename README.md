@@ -4,7 +4,9 @@ Connect to your home Windows PC from anywhere, using the Remote Desktop app you 
 
 ## Who it's for
 
-You want to reach your own PC from outside, and you'd rather not run a homelab to do it.
+**TL;DR:** leave your BYOD laptop at home.
+
+In more detail: you want a real, full-featured Remote Desktop session to your Windows PC at home. You want it secure, over TLS, using the standard Remote Desktop Gateway protocol, without opening port 3389 to the internet. And you have a life, so you do not want to run a complex IT infrastructure at home.
 
 ## What you need
 
