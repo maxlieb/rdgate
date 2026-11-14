@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -136,13 +137,47 @@ func (a *App) Wizard() WizardState {
 	return st
 }
 
-// InstallTailscale shells out to winget. Returning promptly matters more than
-// reporting completion: winget shows its own progress, and the wizard polls
-// Wizard() to notice when the binary appears.
+// InstallTailscale installs Tailscale with winget and waits for it to finish.
+//
+// It used to start winget and return at once, so the button looked dead and
+// a failure was never reported. Now the call returns when the install is done,
+// and says why when it is not: the button stays busy meanwhile, which is the
+// honest state, since a Tailscale install takes a minute or two.
 func (a *App) InstallTailscale() error {
-	cmd := provision.Command(context.Background(), "winget", "install", "--id", "Tailscale.Tailscale",
-		"--silent", "--accept-package-agreements", "--accept-source-agreements")
-	return cmd.Start()
+	if _, err := provision.FindTailscale(); err == nil {
+		return nil // already here; nothing to do
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	cmd := provision.Command(ctx, "winget", "install", "--id", "Tailscale.Tailscale",
+		"--scope", "machine", "--silent", "--disable-interactivity",
+		"--accept-package-agreements", "--accept-source-agreements")
+	out, err := cmd.CombinedOutput()
+
+	if _, ferr := provision.FindTailscale(); ferr == nil {
+		return nil // installed, whatever winget's exit code says
+	}
+	if err != nil {
+		if errors.Is(err, exec.ErrNotFound) {
+			return errors.New("winget is not on this PC, so Tailscale cannot be installed automatically. " +
+				"Install it from tailscale.com/download, then press this button again")
+		}
+		return errors.New("Tailscale could not be installed: " + lastLine(out))
+	}
+	return errors.New("winget finished, but Tailscale was not found. Restart the app and try again")
+}
+
+// lastLine returns the last non-empty line of a command's output.
+func lastLine(b []byte) string {
+	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if t := strings.TrimSpace(lines[i]); t != "" {
+			return t
+		}
+	}
+	return "no output"
 }
 
 // InstallOptions is what the wizard collects. Door decides which of the other

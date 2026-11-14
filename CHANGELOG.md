@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7
+
+- "Install Tailscale" now waits for the installation to finish and shows why it failed, instead of doing nothing.
+- If winget is not on the PC, the app says so and points to tailscale.com/download.
+
 ## 0.1.6
 
 - Fixed the "Sign in to Tailscale" button doing nothing. The sign-in was stopped as soon as it started.
