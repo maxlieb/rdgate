@@ -812,15 +812,31 @@ function buildTailscale(w) {
       : "Tailscale gives this PC an address the outside world can reach, without opening a port on your router."));
     frag.appendChild(actions(button("Install Tailscale", async (b) => {
       b.disabled = true; b.textContent = "Installing…";
-      try { await callBackend("InstallTailscale"); } catch (e) { console.warn(e); }
-      pollWizard();
+      try {
+        await callBackend("InstallTailscale");
+        pollWizard();
+      } catch (e) {
+        b.disabled = false; b.textContent = "Install Tailscale";
+        const box = document.createElement("div");
+        box.className = "verdict-box"; box.dataset.state = "bad";
+        box.textContent = String(e?.message || e);
+        b.parentElement.after(box);
+      }
     })));
   } else {
     frag.appendChild(note("Tailscale is installed. Sign in to get this PC its address."));
     frag.appendChild(actions(button("Sign in to Tailscale", async (b) => {
       b.disabled = true; b.textContent = "Waiting for sign-in…";
-      try { await callBackend("TailscaleLogin"); } catch (e) { console.warn(e); }
-      pollWizard();
+      try {
+        await callBackend("TailscaleLogin");
+        pollWizard();
+      } catch (e) {
+        b.disabled = false; b.textContent = "Sign in to Tailscale";
+        const box = document.createElement("div");
+        box.className = "verdict-box"; box.dataset.state = "bad";
+        box.textContent = String(e?.message || e);
+        b.parentElement.after(box);
+      }
     })));
   }
   return frag;

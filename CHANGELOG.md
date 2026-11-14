@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+
+- Fixed the "Sign in to Tailscale" button doing nothing. The sign-in was stopped as soon as it started.
+- Errors from the Tailscale buttons are shown on screen instead of being hidden.
+
 ## 0.1.5
 
 - Fixed account setup failing with "no such table: user". The sign-in database is now created before the admin account.

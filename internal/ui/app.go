@@ -324,10 +324,15 @@ func (a *App) TailscaleLogin() error {
 	if err != nil {
 		return errors.New("Tailscale is not installed")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel()
-	cmd := provision.Command(ctx, ts.Exe, "up")
-	return cmd.Start() // non-blocking: the user finishes in the browser
+	// Deliberately no context and no cancel: a cancelled context kills the
+	// process as soon as this function returns, which is why the button did
+	// nothing before. tailscale up waits for the browser sign-in on its own.
+	cmd := provision.Command(context.Background(), ts.Exe, "up")
+	if err := cmd.Start(); err != nil {
+		return errors.New("could not start Tailscale sign-in: " + err.Error())
+	}
+	go func() { _ = cmd.Wait() }() // reap the process when it finishes
+	return nil
 }
 
 // EnableFunnel republishes both ports.
