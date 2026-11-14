@@ -16,7 +16,10 @@ func TestTaskXMLHasSchemaOrderAndEncoding(t *testing.T) {
 	if !strings.HasPrefix(doc, `<?xml version="1.0" encoding="UTF-16"?>`) {
 		t.Fatalf("declaration must match the UTF-16 file: %q", doc[:60])
 	}
-	order := []string{"<UserId>", "<LogonType>", "<RunLevel>"}
+	if strings.Contains(doc, "<LogonType") {
+		t.Fatal("LogonType must not be written: ServiceAccount is not valid in schema 1.4")
+	}
+	order := []string{"<UserId>", "<RunLevel>"}
 	last := -1
 	for _, tag := range order {
 		i := strings.Index(doc, tag)

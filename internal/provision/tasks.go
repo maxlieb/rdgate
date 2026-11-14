@@ -44,11 +44,9 @@ type taskXML struct {
 
 	Principals struct {
 		Principal struct {
-			ID     string `xml:"id,attr"`
-			UserID string `xml:"UserId"`
-			// The schema is a sequence: LogonType must come before RunLevel.
-			LogonType string `xml:"LogonType"`
-			RunLevel  string `xml:"RunLevel"`
+			ID       string `xml:"id,attr"`
+			UserID   string `xml:"UserId"`
+			RunLevel string `xml:"RunLevel"`
 		} `xml:"Principal"`
 	} `xml:"Principals"`
 
