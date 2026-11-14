@@ -42,8 +42,7 @@ jobs:
           choco install innosetup -y --no-progress
           mkdir build -Force
           copy cmd\rdgw-manager\build\bin\rdgw-manager.exe build\
-          copy build\rdgwctl.exe build\ -ErrorAction SilentlyContinue
-          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\rdgw-manager.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\rdgw-manager.iss
       - uses: actions/upload-artifact@v4
         with:
           name: rdgate-installer
