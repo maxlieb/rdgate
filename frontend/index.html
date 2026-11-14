@@ -894,15 +894,11 @@ function buildFunnelSetup(w) {
         (r.httpsDetail ? " Tailscale said: " + r.httpsDetail : "")));
     if (!r.https) list.appendChild(actions(dnsButton()));
 
+    // Permission can only be known by trying to publish. Your access rules
+    // may already grant it, so this row is not decided from the policy file.
     list.appendChild(line(r.funnelOn,
       "Funnel is allowed for this PC",
-      r.funnelOn ? "" : "Tailscale asks for this in the access rules. Add the snippet below under nodeAttrs, or open the page Tailscale gave you."));
-    if (!r.funnelOn) {
-      const snippet = document.createElement("pre");
-      snippet.className = "script";
-      snippet.textContent = '"nodeAttrs": [\n  { "target": ["autogroup:member"], "attr": ["funnel"] }\n]';
-      list.appendChild(snippet);
-    }
+      r.funnelOn ? "" : "Press Turn on Funnel to check this one. It is only shown as off until a publish succeeds."));
 
     const ready = r.magicDNS && r.https && r.funnelOn;
     wiz.funnelOk = ready;
@@ -916,8 +912,13 @@ function buildFunnelSetup(w) {
           wiz.funnelOk = true; wiz.funnelLast = null;
           pollWizard();
         } catch (err) {
-          list.appendChild(line(false, "Funnel is still off", String(err && err.message || err)));
+          list.appendChild(line(false, "Funnel did not publish", String(err && err.message || err)));
           if (r.funnelURL) btns.push(button("Open the page Tailscale gave", () => callBackend("OpenFunnelPage"), true));
+          const snippet = document.createElement("pre");
+          snippet.className = "script";
+          snippet.textContent = '"nodeAttrs": [\n  { "target": ["autogroup:members"], "attr": ["funnel"] }\n]';
+          list.appendChild(note("If the message is about access, check the access rules. The default rules already allow Funnel for autogroup:members, so look for an existing funnel entry before adding this:"));
+          list.appendChild(snippet);
         }
       }));
     }

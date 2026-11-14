@@ -385,7 +385,13 @@ func (a *App) EnableFunnel() error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
-	err = ts.EnableFunnel(ctx, cfg.CaddyPort)
+	// The wizard publishes before the config is saved, so the port can be zero
+	// here. Use the default, the same one the install will write.
+	port := cfg.CaddyPort
+	if port == 0 {
+		port = provision.DefaultCaddyPort
+	}
+	err = ts.EnableFunnel(ctx, port)
 	var fe *provision.FunnelError
 	a.mu.Lock()
 	a.funnelURL = ""

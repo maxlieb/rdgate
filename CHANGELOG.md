@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.22
+
+- Publishing before setup no longer fails with "invalid port 0": the default port is used when the config is not saved yet.
+- The Funnel step no longer reads the access rules to decide. It reports the result of Publish, and the rules snippet appears only after a failed publish.
+
 ## 0.1.21
 
 - Funnel now has its own wizard step. It checks MagicDNS, HTTPS certificates and Funnel permission before Publish, and opens the Tailscale page for whichever one is off.
