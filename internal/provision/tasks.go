@@ -5,7 +5,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 )
 
@@ -147,7 +146,7 @@ func RegisterTask(ctx context.Context, name, description, command, arguments, wo
 	}
 	f.Close()
 
-	out, err := exec.CommandContext(ctx, "schtasks", "/Create", "/TN", name, "/XML", tmp, "/F").CombinedOutput()
+	out, err := Command(ctx, "schtasks", "/Create", "/TN", name, "/XML", tmp, "/F").CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("registering task %s: %s", name, firstLine(strings.TrimSpace(string(out))))
 	}
@@ -170,7 +169,7 @@ func utf16LEWithBOM(s string) []byte {
 }
 
 func StartTask(ctx context.Context, name string) error {
-	out, err := exec.CommandContext(ctx, "schtasks", "/Run", "/TN", name).CombinedOutput()
+	out, err := Command(ctx, "schtasks", "/Run", "/TN", name).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("starting task %s: %s", name, firstLine(strings.TrimSpace(string(out))))
 	}
@@ -180,11 +179,11 @@ func StartTask(ctx context.Context, name string) error {
 // StopTask is best effort: a task that is not running is not an error worth
 // surfacing during teardown.
 func StopTask(ctx context.Context, name string) {
-	_ = exec.CommandContext(ctx, "schtasks", "/End", "/TN", name).Run()
+	_ = Command(ctx, "schtasks", "/End", "/TN", name).Run()
 }
 
 func RemoveTask(ctx context.Context, name string) error {
-	out, err := exec.CommandContext(ctx, "schtasks", "/Delete", "/TN", name, "/F").CombinedOutput()
+	out, err := Command(ctx, "schtasks", "/Delete", "/TN", name, "/F").CombinedOutput()
 	if err != nil {
 		s := strings.ToLower(string(out))
 		// Already gone is a success for our purposes.
@@ -197,5 +196,5 @@ func RemoveTask(ctx context.Context, name string) error {
 }
 
 func TaskExists(ctx context.Context, name string) bool {
-	return exec.CommandContext(ctx, "schtasks", "/Query", "/TN", name).Run() == nil
+	return Command(ctx, "schtasks", "/Query", "/TN", name).Run() == nil
 }

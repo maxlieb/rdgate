@@ -3,7 +3,6 @@ package provision
 import (
 	"context"
 	"errors"
-	"os/exec"
 	"strings"
 )
 
@@ -17,7 +16,7 @@ const (
 )
 
 func netsh(ctx context.Context, args ...string) error {
-	out, err := exec.CommandContext(ctx, "netsh", append([]string{"advfirewall", "firewall"}, args...)...).CombinedOutput()
+	out, err := Command(ctx, "netsh", append([]string{"advfirewall", "firewall"}, args...)...).CombinedOutput()
 	if err != nil {
 		return errors.New("netsh: " + strings.TrimSpace(string(out)))
 	}

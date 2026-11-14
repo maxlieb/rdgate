@@ -3,9 +3,11 @@
 package ui
 
 import (
+	"context"
 	"os"
-	"os/exec"
 	"syscall"
+
+	"github.com/maxlieb/rdgw-manager/internal/provision"
 )
 
 // openURL hands a URL or ms-settings: link to the shell.
@@ -14,7 +16,7 @@ import (
 // quoted argument as a window title, which silently does nothing for URLs
 // containing characters that need quoting.
 func openURL(url string) error {
-	cmd := exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	cmd := provision.Command(context.Background(), "rundll32", "url.dll,FileProtocolHandler", url)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	return cmd.Start()
 }

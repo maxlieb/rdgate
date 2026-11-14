@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Stopped a console window from flashing on screen each time the app runs a Windows tool such as Tailscale, netsh or schtasks.
+
 ## 0.1.1
 
 - Fixed the first-run wizard showing an empty window. The desktop app could not find its backend, so no step appeared. Backend errors are now shown on screen.

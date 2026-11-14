@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -140,7 +139,7 @@ func (a *App) Wizard() WizardState {
 // reporting completion: winget shows its own progress, and the wizard polls
 // Wizard() to notice when the binary appears.
 func (a *App) InstallTailscale() error {
-	cmd := exec.Command("winget", "install", "--id", "Tailscale.Tailscale",
+	cmd := provision.Command(context.Background(), "winget", "install", "--id", "Tailscale.Tailscale",
 		"--silent", "--accept-package-agreements", "--accept-source-agreements")
 	return cmd.Start()
 }
@@ -326,7 +325,7 @@ func (a *App) TailscaleLogin() error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, ts.Exe, "up")
+	cmd := provision.Command(ctx, ts.Exe, "up")
 	return cmd.Start() // non-blocking: the user finishes in the browser
 }
 

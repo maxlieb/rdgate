@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"os/exec"
 	"runtime"
 	"strings"
 	"time"
@@ -255,7 +254,7 @@ func checkRDPEnabled() Check {
 	if runtime.GOOS != "windows" {
 		return Check{Name: name, State: StateUnknown, Detail: "not a Windows host"}
 	}
-	out, err := exec.Command("reg", "query",
+	out, err := Command(context.Background(), "reg", "query",
 		`HKLM\System\CurrentControlSet\Control\Terminal Server`,
 		"/v", "fDenyTSConnections").Output()
 	if err != nil {

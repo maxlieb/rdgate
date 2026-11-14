@@ -65,7 +65,7 @@ type TailscaleState struct {
 }
 
 func (t *Tailscale) run(ctx context.Context, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, t.Exe, args...)
+	cmd := Command(ctx, t.Exe, args...)
 	out, err := cmd.CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }

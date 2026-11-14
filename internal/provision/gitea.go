@@ -12,7 +12,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 )
@@ -165,7 +164,7 @@ func (g Gitea) WriteConfig(c Config) error {
 
 func (g Gitea) cli(ctx context.Context, args ...string) (string, error) {
 	args = append(args, "--config", g.AppIni)
-	cmd := exec.CommandContext(ctx, g.Exe, args...)
+	cmd := Command(ctx, g.Exe, args...)
 	cmd.Env = append(os.Environ(), "GITEA_WORK_DIR="+g.WorkPath)
 	out, err := cmd.CombinedOutput()
 	return strings.TrimSpace(string(out)), err
