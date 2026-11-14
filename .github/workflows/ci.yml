@@ -38,6 +38,19 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.24"
+      - name: Point the Go build cache at a known folder
+        run: |
+          "GOCACHE=${{ runner.temp }}\gocache" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Restore the Go build cache
+        # Compiled packages (including the big Wails dependency tree) are reused
+        # between runs. The key follows go.sum, so a dependency change rebuilds.
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}\gocache
+          key: gocache-windows-${{ hashFiles('**/go.sum') }}-${{ github.run_id }}
+          restore-keys: |
+            gocache-windows-${{ hashFiles('**/go.sum') }}-
+            gocache-windows-
       - name: Core tests on Windows
         run: go test ./...
       - name: Build the CLI for Windows
@@ -84,12 +97,13 @@ jobs:
       - name: Build the desktop app
         # wails.json lives beside main.go, so the CLI must run from there.
         working-directory: cmd/rdgw-manager
-        run: |
-          go mod tidy
-          wails build -tags wails -platform windows/amd64 -o rdgw-manager.exe
+        run: wails build -tags wails -platform windows/amd64 -o rdgw-manager.exe
       - name: Build the installer
         run: |
-          choco install innosetup -y --no-progress
+          # Installing Inno Setup takes a while, so skip it when the runner already has it.
+          if (-not (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup -y --no-progress
+          }
           New-Item -ItemType Directory -Force build | Out-Null
           Copy-Item cmd\rdgw-manager\build\bin\rdgw-manager.exe build\
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\rdgw-manager.iss
