@@ -79,7 +79,7 @@ jobs:
           Pop-Location
           Copy-Item rdpgw-src\LICENSE build\rdpgw-LICENSE.txt
           # The gateway serves its web pages from a templates folder beside rdpgw.exe.
-          Copy-Item -Recurse -Force rdpgw-src\templates build\rdpgw-templates
+          Copy-Item -Recurse -Force rdpgw-src\cmd\rdpgw\templates build\rdpgw-templates
 
       - name: Fetch Git (MinGit, GPL-2.0) for the installer
         # Pinned like Wails and rdpgw, so a new upstream release cannot break the build.
