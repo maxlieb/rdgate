@@ -33,8 +33,6 @@ jobs:
       # Pinned so the cache below stays valid. Bump deliberately.
       WAILS_VERSION: v2.17.1
       RDPGW_SHA: 468f70cf7524daccb17438b6dd3041f777e6aea5
-      # Where `go install` puts the Wails CLI, so it can be cached by path.
-      GOBIN: ${{ runner.temp }}\gobin
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -75,6 +73,9 @@ jobs:
           key: wails-${{ env.WAILS_VERSION }}-windows
       - name: Install Wails
         if: steps.wails-cache.outputs.cache-hit != 'true'
+        env:
+          # Where `go install` puts the CLI, so the cache step can find it by path.
+          GOBIN: ${{ runner.temp }}\gobin
         run: go install github.com/wailsapp/wails/v2/cmd/wails@$env:WAILS_VERSION
       - name: Put Wails on the PATH
         run: |
