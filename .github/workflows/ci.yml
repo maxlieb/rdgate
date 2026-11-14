@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version, e.g. v0.1.0 (publishes a Release)"
+        description: "Release version, e.g. v0.1.9 (publishes a Release). Leave empty to only build."
         required: false
         default: ""
 
-# Needed so a version tag can create a Release with the installer attached.
+# Needed so a manual run with a version can create a Release with the installer.
 permissions:
   contents: write
 
@@ -29,6 +29,12 @@ jobs:
     # The real target. Task Scheduler, netsh, the Caddy and Gitea downloads and
     # the Wails build can only be exercised here, not on Linux.
     runs-on: windows-latest
+    env:
+      # Pinned so the cache below stays valid. Bump deliberately.
+      WAILS_VERSION: v2.17.1
+      RDPGW_SHA: 468f70cf7524daccb17438b6dd3041f777e6aea5
+      # Where `go install` puts the Wails CLI, so it can be cached by path.
+      GOBIN: ${{ runner.temp }}\gobin
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -37,22 +43,43 @@ jobs:
       - name: Core tests on Windows
         run: go test ./...
       - name: Build the CLI for Windows
-        run: go build -o build/rdgwctl.exe ./cmd/rdgwctl
-      - name: Build the gateway program (rdpgw, Apache-2.0)
-        # Pinned to a commit: v9.0.1 has no Windows build of its socket code.
-        # Its LICENSE ships next to it, as Apache-2.0 requires for redistribution.
         run: |
           New-Item -ItemType Directory -Force build | Out-Null
+          go build -o build/rdgwctl.exe ./cmd/rdgwctl
+
+      - name: Restore the gateway program from cache
+        id: rdpgw-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/rdpgw.exe
+            build/rdpgw-LICENSE.txt
+          key: rdpgw-${{ env.RDPGW_SHA }}
+      - name: Build the gateway program (rdpgw, Apache-2.0)
+        # Only runs when the cache misses, i.e. when the pinned commit changes.
+        if: steps.rdpgw-cache.outputs.cache-hit != 'true'
+        run: |
           git clone https://github.com/bolkedebruin/rdpgw rdpgw-src
-          git -C rdpgw-src checkout 468f70cf7524daccb17438b6dd3041f777e6aea5
+          git -C rdpgw-src checkout $env:RDPGW_SHA
           Push-Location rdpgw-src
-          # The upstream go.sum is incomplete for this tag; -mod=mod fills it in
-          # while building, and the pinned tag keeps the result reproducible.
+          # The upstream go.sum is incomplete for this commit; -mod=mod fills it in.
           go build -mod=mod -o ..\build\rdpgw.exe ./cmd/rdpgw
           Pop-Location
           Copy-Item rdpgw-src\LICENSE build\rdpgw-LICENSE.txt
+
+      - name: Restore the Wails CLI from cache
+        id: wails-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}\gobin\wails.exe
+          key: wails-${{ env.WAILS_VERSION }}-windows
       - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+        if: steps.wails-cache.outputs.cache-hit != 'true'
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@$env:WAILS_VERSION
+      - name: Put Wails on the PATH
+        run: |
+          "${{ runner.temp }}\\gobin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
       - name: Build the desktop app
         # wails.json lives beside main.go, so the CLI must run from there.
         working-directory: cmd/rdgw-manager
@@ -62,20 +89,19 @@ jobs:
       - name: Build the installer
         run: |
           choco install innosetup -y --no-progress
-          mkdir build -Force
-          copy cmd\rdgw-manager\build\bin\rdgw-manager.exe build\
+          New-Item -ItemType Directory -Force build | Out-Null
+          Copy-Item cmd\rdgw-manager\build\bin\rdgw-manager.exe build\
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\rdgw-manager.iss
       - uses: actions/upload-artifact@v4
         with:
           name: rdgate-installer
           path: dist/*.exe
-      - name: Publish a Release for version tags
-        # Publishes on a version tag, or on a manual run with a version entered.
-        # Ordinary pushes stop at the artifact.
-        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.version != '')
+      - name: Publish a Release for a manual run with a version
+        # Only a manual run with a version entered publishes. Pushes stop at the artifact.
+        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          TAG: ${{ inputs.version }}
           SHA: ${{ github.sha }}
         run: |
           $files = Get-ChildItem dist\*.exe | ForEach-Object { $_.FullName }
