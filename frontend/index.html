@@ -811,7 +811,7 @@ function buildTailscale(w) {
       ? "Tailscale is the private link between this PC and your server. Nothing is opened on your router."
       : "Tailscale gives this PC an address the outside world can reach, without opening a port on your router."));
     frag.appendChild(note("Install Tailscale first. It takes a minute, then come back here and press Check again."));
-    const cmd = "winget install --id Tailscale.Tailscale --scope machine";
+    const cmd = "winget install --id Tailscale.Tailscale --scope machine --source winget";
     const pre = document.createElement("pre");
     pre.className = "script";
     pre.textContent = cmd;

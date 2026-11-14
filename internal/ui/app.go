@@ -152,6 +152,7 @@ func (a *App) InstallTailscale() error {
 	defer cancel()
 
 	cmd := provision.Command(ctx, "winget", "install", "--id", "Tailscale.Tailscale",
+		"--source", "winget", // the msstore source fails on some networks with a certificate error
 		"--scope", "machine", "--silent", "--disable-interactivity",
 		"--accept-package-agreements", "--accept-source-agreements")
 	out, err := cmd.CombinedOutput()
