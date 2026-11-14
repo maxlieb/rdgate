@@ -2,7 +2,6 @@ package provision
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net"
 	"net/http"
@@ -210,41 +209,12 @@ func checkListening(name string, port int, hint string) Check {
 // Enrollment is enforced in app.ini so a new user cannot get past it, but this
 // still catches a config that predates the enforcement setting.
 func checkTwoFactor(ctx context.Context, c Config) Check {
+	// Gitea's admin API cannot filter users by two-factor status: the query
+	// returned every account, so this used to report "enrolled" for anyone.
+	// Until enrollment is enforced on the sign-in path, say so instead.
 	const name = "Two-factor"
-	if c.GiteaAdminToken == "" {
-		return Check{Name: name, State: StateUnknown,
-			Detail: "no admin token stored",
-			Hint:   "Re-run the wizard to let the manager query enrollment status."}
-	}
-	url := "http://127.0.0.1:" + itoa(c.GiteaPort) + "/api/v1/admin/users?is_2fa_enabled=true&limit=1"
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return Check{Name: name, State: StateUnknown, Detail: err.Error()}
-	}
-	req.Header.Set("Authorization", "token "+c.GiteaAdminToken)
-
-	resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
-	if err != nil {
-		return Check{Name: name, State: StateUnknown, Detail: "sign-in service unreachable"}
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return Check{Name: name, State: StateUnknown,
-			Detail: "admin API returned " + resp.Status}
-	}
-	var users []struct {
-		Login string `json:"login"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&users); err != nil {
-		return Check{Name: name, State: StateUnknown, Detail: "unexpected API response"}
-	}
-	if len(users) == 0 {
-		return Check{Name: name, State: StateWarn,
-			Detail: "nobody has enrolled yet",
-			Hint: "Open the sign-in page and set up your authenticator app. Until you do, " +
-				"the gateway is behind a password alone."}
-	}
-	return Check{Name: name, State: StateOK, Detail: "enrolled"}
+	return Check{Name: name, State: StateUnknown, Detail: "not enforced yet",
+		Hint: "Sign-in does not yet require two-factor. Do not share the address until it does."}
 }
 
 // checkRDPEnabled catches the embarrassing case where the whole stack is

@@ -265,7 +265,19 @@ func (g Gitea) CreateAdminToken(ctx context.Context, username string) (string, e
 func (g Gitea) MintToken(ctx context.Context, username, scopes string) (string, error) {
 	// A fixed token name collides with the one from an earlier attempt ("access
 	// token name has been used already"), so every run gets its own name.
+	token, _, err := g.mintNamed(ctx, username, scopes)
+	return token, err
+}
+
+// mintNamed is MintToken, and also returns the name so the token can be
+// deleted later.
+func (g Gitea) mintNamed(ctx context.Context, username, scopes string) (string, string, error) {
 	name := "rdgw-setup-" + strconv.FormatInt(time.Now().UnixNano(), 36)
+	token, err := g.mintWithName(ctx, username, name, scopes)
+	return token, name, err
+}
+
+func (g Gitea) mintWithName(ctx context.Context, username, name, scopes string) (string, error) {
 	out, err := g.cli(ctx, "admin", "user", "generate-access-token",
 		"--username", username, "--token-name", name, "--scopes", scopes, "--raw")
 	if err != nil {
@@ -349,4 +361,20 @@ func dirOf(p string) string {
 		return p[:i]
 	}
 	return "."
+}
+
+// ChangePassword gives the gateway account a new password and returns it. It
+// uses Gitea's own command, which needs no API token, so nothing is left
+// behind. The caller shows the password once and does not keep it.
+func (g Gitea) ChangePassword(ctx context.Context, username string) (string, error) {
+	pw, err := NewPassword(20)
+	if err != nil {
+		return "", err
+	}
+	out, err := g.cli(ctx, "admin", "user", "change-password",
+		"--username", username, "--password", pw, "--must-change-password=false")
+	if err != nil {
+		return "", fmt.Errorf("changing the password: %s", reason(out))
+	}
+	return pw, nil
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.33
+
+- Dashboard: Stop gateway, Start gateway, and Change password. The new password is shown once, like at setup.
+- The Two-factor line no longer says "enrolled". Gitea's API could not filter by two-factor status, so it reported enrollment for every account. It now says that two-factor is not enforced yet.
+
 ## 0.1.32
 
 - The sign-in and server pages show their logos. The gateway's assets folder ships with the installer and is copied into place on setup and on Repair.

@@ -546,3 +546,32 @@ func (a *App) Uninstall(purge bool) []string {
 	}
 	return out
 }
+
+// StopGateway stops the gateway program. Its sign-in and web front end keep running.
+func (a *App) StopGateway() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	provision.StopTask(ctx, provision.TaskGateway)
+	return nil
+}
+
+// StartGateway starts the gateway program again.
+func (a *App) StartGateway() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return provision.StartTask(ctx, provision.TaskGateway)
+}
+
+// ChangeGatewayPassword sets a new password for the gateway account and returns
+// it once. The dashboard shows it and does not keep it.
+func (a *App) ChangeGatewayPassword() (string, error) {
+	a.mu.RLock()
+	cfg := a.cfg
+	a.mu.RUnlock()
+	if cfg.InstallRoot == "" {
+		return "", errors.New("this PC is not set up yet")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	return provision.NewGitea(cfg).ChangePassword(ctx, cfg.AdminUser)
+}

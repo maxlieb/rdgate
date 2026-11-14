@@ -354,6 +354,9 @@ pre.script { margin: 10px 0 0; max-height: 150px; overflow: auto; padding: 10px 
     <span id="foot-note"></span>
     <span class="foot-actions">
       <button class="ghost" id="recheck">Check again</button>
+      <button class="ghost" id="stop-gw" title="Stops the gateway program. Sign-in and the web front end keep running.">Stop gateway</button>
+      <button class="ghost" id="start-gw" title="Starts the gateway program again.">Start gateway</button>
+      <button class="ghost" id="change-pw" title="Sets a new password for the gateway account. It is shown once.">Change password</button>
       <button class="ghost" id="repair" title="Rewrites the gateway's config and web pages, then restarts it. Nothing is reinstalled.">Repair gateway</button>
       <button class="ghost" id="settings">Settings</button>
     </span>
@@ -582,6 +585,52 @@ async function refresh() {
 document.getElementById("recheck").addEventListener("click", refresh);
 document.getElementById("open-portal").addEventListener("click", () => callBackend("OpenPortal"));
 document.getElementById("settings").addEventListener("click", () => callBackend("OpenSettings"));
+document.getElementById("stop-gw").addEventListener("click", (e) =>
+  act(e.currentTarget, { label: "Stop gateway", call: "StopGateway" }));
+document.getElementById("start-gw").addEventListener("click", (e) =>
+  act(e.currentTarget, { label: "Start gateway", call: "StartGateway" }));
+
+// A new password is shown once, in a panel the user dismisses. It is not kept
+// anywhere in the page after that.
+document.getElementById("change-pw").addEventListener("click", async (e) => {
+  const b = e.currentTarget;
+  if (!confirm("Set a new password for the gateway account? The current one stops working.")) return;
+  b.disabled = true;
+  try {
+    const pw = await callBackend("ChangeGatewayPassword");
+    showNewPassword(pw);
+  } catch (err) {
+    alert("Could not change the password: " + String(err && err.message || err));
+  } finally {
+    b.disabled = false;
+  }
+});
+
+function showNewPassword(pw) {
+  let panel = document.getElementById("new-password");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "new-password";
+    panel.className = "verdict-box";
+    panel.dataset.state = "";
+    // Placed just above the footer, so it sits with the actions it belongs to.
+    document.querySelector("footer.foot").before(panel);
+  }
+  panel.textContent = "";
+  const t = document.createElement("p");
+  t.textContent = "New password for the gateway account. Write it down now. It is shown once and not stored.";
+  const code = document.createElement("pre");
+  code.className = "script";
+  code.textContent = pw;
+  const row = document.createElement("div");
+  row.className = "step-actions";
+  row.appendChild(button("Copy", async (b) => {
+    try { await navigator.clipboard.writeText(pw); b.textContent = "Copied"; } catch {}
+  }, true));
+  row.appendChild(button("Done", () => { panel.textContent = ""; panel.remove(); }, true));
+  panel.append(t, code, row);
+}
+
 document.getElementById("repair").addEventListener("click", (e) =>
   act(e.currentTarget, { label: "Repair gateway", call: "RepairGateway" }));
 document.getElementById("copy-address").addEventListener("click", async (e) => {
