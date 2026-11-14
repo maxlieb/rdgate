@@ -12,3 +12,6 @@ dist/
 rdpgw/
 gitea/
 caddy/
+
+# Local test screenshots
+shots/
