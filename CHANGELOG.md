@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.10
+
+- When Tailscale is installed but this PC is not connected to it, the wizard now explains what to do: open Tailscale, sign in, and connect this PC to your tailnet. It continues on its own once connected. The sign-in button was removed.
+
 ## 0.1.9
 
 - Tailscale is installed from winget's own source. The Microsoft Store source failed with a certificate error on some networks, and the wizard's command now names the source.
