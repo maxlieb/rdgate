@@ -33,7 +33,16 @@ type App struct {
 	// runtime.EventsEmit; keeping it a plain function means this package has
 	// no dependency on the GUI toolkit and still compiles and tests alone.
 	Emit func(event string, data any)
+
+	// funnelURL is the page Tailscale last asked us to open to allow Funnel.
+	funnelURL string
 }
+
+// Where the Tailscale switches Funnel depends on live. The wizard links here.
+const (
+	tsDNSAdmin = "https://login.tailscale.com/admin/dns"
+	tsACLAdmin = "https://login.tailscale.com/admin/acls/file"
+)
 
 func (a *App) emit(event string, data any) {
 	a.mu.RLock()
@@ -374,9 +383,49 @@ func (a *App) EnableFunnel() error {
 	if cfg.FrontDoor == provision.FrontDoorDirect || cfg.FrontDoor == provision.FrontDoorRelay {
 		return errors.New("this gateway uses your own domain, so there is nothing to publish here")
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	err = ts.EnableFunnel(ctx, cfg.CaddyPort)
+	var fe *provision.FunnelError
+	a.mu.Lock()
+	a.funnelURL = ""
+	if errors.As(err, &fe) {
+		a.funnelURL = fe.URL
+	}
+	a.mu.Unlock()
+	return err
+}
+
+// FunnelSetup reports which Tailscale switches Funnel needs are already on.
+func (a *App) FunnelSetup() (provision.FunnelReadiness, error) {
+	ts, err := provision.FindTailscale()
+	if err != nil {
+		return provision.FunnelReadiness{}, errors.New("Tailscale is not installed")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	return ts.EnableFunnel(ctx, cfg.CaddyPort)
+	r, err := ts.Readiness(ctx)
+	a.mu.RLock()
+	r.FunnelURL = a.funnelURL
+	a.mu.RUnlock()
+	return r, err
+}
+
+// OpenTailscaleDNS opens the admin console page for MagicDNS and HTTPS certificates.
+func (a *App) OpenTailscaleDNS() error { return openURL(tsDNSAdmin) }
+
+// OpenTailscaleACL opens the access-rules file, where the funnel attribute is granted.
+func (a *App) OpenTailscaleACL() error { return openURL(tsACLAdmin) }
+
+// OpenFunnelPage opens the link Tailscale printed when it refused Funnel.
+func (a *App) OpenFunnelPage() error {
+	a.mu.RLock()
+	u := a.funnelURL
+	a.mu.RUnlock()
+	if !strings.HasPrefix(u, "https://") {
+		return errors.New("Tailscale did not give a page to open; use the admin console links instead")
+	}
+	return openURL(u)
 }
 
 func (a *App) RestartGateway() error { return restart(provision.TaskGateway) }

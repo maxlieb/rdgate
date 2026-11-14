@@ -216,6 +216,8 @@ button[disabled] { opacity: .4; cursor: default; }
 .step-title { font-weight: 500; }
 .step[data-state="todo"] .step-title { color: var(--ink-faint); }
 .step-note { margin: 4px 0 0; color: var(--ink-soft); font-size: 14px; max-width: 58ch; }
+.check-row { margin: 10px 0 0; }
+.check-row strong { font-weight: 600; }
 .step-note code {
   font-family: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
   font-size: 12.5px; background: var(--paper-rise);
@@ -577,7 +579,7 @@ document.getElementById("copy-address").addEventListener("click", async (e) => {
 const wiz = {
   door: null,                 // chosen on the first screen
   form: { domain: "", email: "", ddns: "duck", duckName: "", duckToken: "", ddnsUrl: "" },
-  directCheck: null, directAck: false, addressOk: false,
+  directCheck: null, directAck: false, addressOk: false, funnelOk: false, funnelLast: null, funnelAt: 0,
   targets: [], installing: false, result: null, progress: [],
 };
 
@@ -609,6 +611,9 @@ function wizardSteps(w) {
   } else {
     steps.push({ title: "Connect Tailscale",
       done: () => w.tailscaleInstalled && w.signedIn, build: () => buildTailscale(w) });
+  }
+  if (door === "funnel") {
+    steps.push({ title: "Turn on Funnel for this PC", done: () => wiz.funnelOk, build: () => buildFunnelSetup(w) });
   }
   if (door !== "funnel") {
     steps.push({ title: door === "direct" ? "Pick your address" : "Your domain name",
@@ -834,6 +839,96 @@ function buildTailscale(w) {
 // The gateway program ships inside the installer, so this step normally
 // completes by itself. It is only shown if the bundled copy is missing, and
 // the fix is to reinstall, not to build anything.
+// Funnel needs three switches in the Tailscale admin console. Instead of
+// failing at Publish, this step checks each one and gives the exact place to
+// click for the one that is off.
+function buildFunnelSetup(w) {
+  const frag = document.createDocumentFragment();
+  frag.appendChild(note("Funnel needs three things switched on in your Tailscale account. The app checks them here and opens the right page for any that is off."));
+  const list = document.createElement("div");
+  list.className = "checks";
+  frag.appendChild(list);
+
+  const line = (ok, title, detail) => {
+    const d = document.createElement("div");
+    d.className = "check-row";
+    const mark = document.createElement("strong");
+    mark.textContent = (ok ? "✓ " : "✗ ") + title;
+    d.appendChild(mark);
+    if (detail) {
+      const p = document.createElement("p");
+      p.className = "step-note";
+      p.textContent = detail;
+      d.appendChild(p);
+    }
+    return d;
+  };
+
+  // The wizard redraws every few seconds, so a recent answer is reused rather
+  // than asking Tailscale again each time. Buttons pass force = true.
+  const check = async (force) => {
+    list.textContent = "";
+    let r;
+    try {
+      if (!force && wiz.funnelLast && Date.now() - wiz.funnelAt < 15000) {
+        r = wiz.funnelLast;
+      } else {
+        r = await callBackend("FunnelSetup");
+        wiz.funnelLast = r; wiz.funnelAt = Date.now();
+      }
+    } catch (err) {
+      list.appendChild(line(false, "Could not read Tailscale", String(err && err.message || err)));
+      list.appendChild(actions(button("Check again", () => check(true), true)));
+      return;
+    }
+    const dnsButton = () => button("Open DNS settings", () => callBackend("OpenTailscaleDNS"));
+
+    list.appendChild(line(r.magicDNS,
+      "MagicDNS is on",
+      r.magicDNS ? "" : "Admin console → DNS → turn on MagicDNS."));
+    if (!r.magicDNS) list.appendChild(actions(dnsButton()));
+
+    list.appendChild(line(r.https,
+      "HTTPS certificates are on",
+      r.https ? "" : "Admin console → DNS → HTTPS Certificates → Enable HTTPS." +
+        (r.httpsDetail ? " Tailscale said: " + r.httpsDetail : "")));
+    if (!r.https) list.appendChild(actions(dnsButton()));
+
+    list.appendChild(line(r.funnelOn,
+      "Funnel is allowed for this PC",
+      r.funnelOn ? "" : "Tailscale asks for this in the access rules. Add the snippet below under nodeAttrs, or open the page Tailscale gave you."));
+    if (!r.funnelOn) {
+      const snippet = document.createElement("pre");
+      snippet.className = "script";
+      snippet.textContent = '"nodeAttrs": [\n  { "target": ["autogroup:member"], "attr": ["funnel"] }\n]';
+      list.appendChild(snippet);
+    }
+
+    const ready = r.magicDNS && r.https && r.funnelOn;
+    wiz.funnelOk = ready;
+    if (ready) { pollWizard(); return; }
+
+    const btns = [button("Check again", () => check(true), true)];
+    if (r.magicDNS && r.https) {
+      btns.unshift(button("Turn on Funnel", async () => {
+        try {
+          await callBackend("EnableFunnel");
+          wiz.funnelOk = true; wiz.funnelLast = null;
+          pollWizard();
+        } catch (err) {
+          list.appendChild(line(false, "Funnel is still off", String(err && err.message || err)));
+          if (r.funnelURL) btns.push(button("Open the page Tailscale gave", () => callBackend("OpenFunnelPage"), true));
+        }
+      }));
+    }
+    btns.push(button("Open access rules", () => callBackend("OpenTailscaleACL"), true));
+    list.appendChild(actions(...btns));
+  };
+
+  check(false);
+  return frag;
+}
+
 function buildRdpgw(w) {
   const frag = document.createDocumentFragment();
   frag.appendChild(note(

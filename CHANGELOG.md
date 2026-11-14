@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.21
+
+- Funnel now has its own wizard step. It checks MagicDNS, HTTPS certificates and Funnel permission before Publish, and opens the Tailscale page for whichever one is off.
+- When Tailscale refuses Funnel, the app keeps the link it printed and offers to open it.
+
 ## 0.1.20
 
 - Publishing on Tailscale no longer waits forever. After 90 seconds it stops and says that Funnel must be enabled for the tailnet in the admin console.

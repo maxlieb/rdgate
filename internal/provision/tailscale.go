@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -130,12 +131,74 @@ func (t *Tailscale) EnableFunnel(ctx context.Context, caddyPort int) error {
 	defer cancel()
 	out, err := t.run(ctx, args...)
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		return errors.New("Tailscale did not finish publishing on 443. Funnel must be enabled for this tailnet: open the Tailscale admin console, enable Funnel, then press Publish again")
+		return &FunnelError{URL: firstURL(out), Msg: "Tailscale did not finish publishing on 443. Funnel is not allowed for this PC yet."}
 	}
 	if err != nil {
-		return errors.New("publishing on 443 failed: " + out)
+		return &FunnelError{URL: firstURL(out), Msg: "publishing on 443 failed: " + out}
 	}
 	return nil
+}
+
+// FunnelError is returned when Tailscale refuses to publish. URL is the page
+// the CLI printed for allowing Funnel on this PC, when it printed one.
+type FunnelError struct {
+	URL string
+	Msg string
+}
+
+func (e *FunnelError) Error() string { return e.Msg }
+
+var urlRe = regexp.MustCompile(`https://[^\s"'<>]+`)
+
+func firstURL(s string) string { return urlRe.FindString(s) }
+
+// FunnelReadiness is what the Funnel step shows. Each field is one switch in
+// the Tailscale admin console, so the wizard can point at exactly the one that
+// is off.
+type FunnelReadiness struct {
+	Hostname    string `json:"hostname"`
+	Connected   bool   `json:"connected"`
+	MagicDNS    bool   `json:"magicDNS"`
+	HTTPS       bool   `json:"https"`
+	HTTPSDetail string `json:"httpsDetail"`
+	FunnelOn    bool   `json:"funnelOn"`
+	FunnelURL   string `json:"funnelURL"`
+}
+
+// Readiness checks MagicDNS and HTTPS certificates directly. Funnel permission
+// cannot be read without asking Tailscale to publish, so FunnelOn reports only
+// whether something is already published.
+func (t *Tailscale) Readiness(ctx context.Context) (FunnelReadiness, error) {
+	st, err := t.State(ctx)
+	if err != nil {
+		return FunnelReadiness{}, err
+	}
+	r := FunnelReadiness{Hostname: st.Hostname, Connected: st.Running, MagicDNS: st.MagicDNSEnabled}
+	if !st.Running || st.Hostname == "" {
+		r.HTTPSDetail = "This PC is not connected to your tailnet yet."
+		return r, nil
+	}
+
+	dir, err := os.MkdirTemp("", "rdgw-cert-")
+	if err != nil {
+		return r, err
+	}
+	defer os.RemoveAll(dir)
+	cctx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+	out, err := t.run(cctx, "cert",
+		"--cert-file", filepath.Join(dir, "c.crt"),
+		"--key-file", filepath.Join(dir, "c.key"),
+		st.Hostname)
+	if err == nil {
+		r.HTTPS = true
+	} else {
+		r.HTTPSDetail = firstLine(out)
+	}
+
+	on, _, _ := t.FunnelActive(ctx)
+	r.FunnelOn = on
+	return r, nil
 }
 
 // FunnelActive reports whether anything is currently published. Used by the
