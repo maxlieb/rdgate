@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.13
+
+- Fixed "The task XML contains a value which is incorrectly formatted or out of range" when the sign-in service is registered. The task's logon type was not valid for the schema in use.
+
 ## 0.1.12
 
 - Fixed "The task XML is malformed" when the sign-in service is registered. The task definition now follows Windows' element order and declares the encoding it is saved in.
