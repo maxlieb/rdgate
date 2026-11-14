@@ -364,6 +364,19 @@ func (a *App) OpenTwoFactor() error {
 	return openURL(url)
 }
 
+// OpenSettings opens the install folder, where config.json and the gateway
+// log live. It is what the dashboard's Settings button has always been meant
+// to reach, and it was missing from the Go side.
+func (a *App) OpenSettings() error {
+	a.mu.RLock()
+	root := a.cfg.InstallRoot
+	a.mu.RUnlock()
+	if root == "" {
+		return errors.New("this PC is not set up yet")
+	}
+	return exec.Command("explorer", root).Start()
+}
+
 // OpenRDPSettings jumps straight to the Remote Desktop page in Settings
 // rather than describing where to find it.
 func (a *App) OpenRDPSettings() error {

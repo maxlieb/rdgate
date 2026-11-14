@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.26
+
+- Settings opens the install folder. It was missing on the Go side, so the button did nothing.
+- The dashboard redraws only when the status changes. The "checked" time is updated on its own, so the list no longer rebuilds every refresh.
+
 ## 0.1.25
 
 - Dashboard no longer redraws when nothing changed. Buttons respond to clicks, and text can be selected and copied while it refreshes.

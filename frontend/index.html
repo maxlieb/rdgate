@@ -437,8 +437,15 @@ function render(status) {
   // The dashboard refreshes every few seconds. Rebuilding an unchanged list
   // swallows clicks that began on a button and drops any text selection, so
   // a redraw only happens when something actually changed.
-  const key = JSON.stringify([status, state.door]);
-  if (key === state.renderKey) return;
+  // checkedAt changes on every call, so it is left out of the comparison and
+  // the "checked" label is updated on its own below.
+  const { checkedAt, ...same } = status;
+  const key = JSON.stringify([same, state.door]);
+  if (key === state.renderKey) {
+    document.getElementById("checked-at").textContent =
+      checkedAt ? "checked " + timeAgo(new Date(checkedAt)) : "";
+    return;
+  }
   state.renderKey = key;
   state.status = status;
   const checks = [...(status.checks || [])].sort(
