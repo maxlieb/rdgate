@@ -383,14 +383,13 @@ const LABELS = {
 // user is never told what is wrong without being offered the way out.
 const REMEDIES = {
   "Remote Desktop": { label: "Open Remote Desktop settings", call: "OpenRDPSettings" },
-  "Tailscale":      { label: "Sign in to Tailscale",         call: "TailscaleLogin" },
   "Public address": { label: "Publish again",                call: "EnableFunnel" },
   "Two-factor":     { label: "Set up two-factor",            call: "OpenTwoFactor" },
   "Gateway service":{ label: "Restart gateway",              call: "RestartGateway" },
   "Sign-in service":{ label: "Restart sign-in",              call: "RestartSignIn" },
 };
 
-const state = { status: null, busy: false, door: "funnel", tsLoginUrl: "" };
+const state = { status: null, busy: false, door: "funnel" };
 
 // What the fix button for the public address does depends on how the gateway
 // is reached: republishing means nothing for a relay, where the useful thing
@@ -825,28 +824,9 @@ function buildTailscale(w) {
       button("Check again", () => pollWizard(), true),
     ));
   } else {
-    frag.appendChild(note("Tailscale is installed. Sign in to get this PC its address."));
-    if (state.tsLoginUrl) {
-      // Kept in state, because the wizard redraws every few seconds.
-      frag.appendChild(note("Sign-in page. If your browser did not open, copy this address into it:"));
-      const link = document.createElement("pre");
-      link.className = "script";
-      link.textContent = state.tsLoginUrl;
-      frag.appendChild(link);
-    }
-    frag.appendChild(actions(button("Sign in to Tailscale", async (b) => {
-      b.disabled = true; b.textContent = "Waiting for sign-in…";
-      try {
-        state.tsLoginUrl = (await callBackend("TailscaleLogin")) || "";
-        pollWizard();
-      } catch (e) {
-        b.disabled = false; b.textContent = "Sign in to Tailscale";
-        const box = document.createElement("div");
-        box.className = "verdict-box"; box.dataset.state = "bad";
-        box.textContent = String(e?.message || e);
-        b.parentElement.after(box);
-      }
-    })));
+    // Tailscale is installed but this PC is not on a tailnet yet. The wizard
+    // polls every few seconds, so this step moves on by itself once it is.
+    frag.appendChild(note("Tailscale is installed, but this PC is not connected to it yet. Open Tailscale from the taskbar, sign in to your account, and connect this PC to your tailnet. This page will continue on its own when it is connected."));
   }
   return frag;
 }
