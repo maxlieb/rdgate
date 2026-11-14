@@ -208,8 +208,12 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 	}
 
 	report.step("Starting gateway", StepRunning, "")
+	// Run through cmd so rdpgw's output lands in a file. A scheduled task has
+	// no console, so without this a failed start leaves nothing to read.
+	gwLog := winJoin(rdpgwDir, "rdpgw.log")
+	gwCmd := `/c ""` + rdpgwExe + `" --conf "` + winJoin(rdpgwDir, "rdpgw.yaml") + `" >> "` + gwLog + `" 2>&1"`
 	if err := RegisterTask(ctx, TaskGateway, "RD Gateway",
-		rdpgwExe, `--conf "`+winJoin(rdpgwDir, "rdpgw.yaml")+`"`, rdpgwDir); err != nil {
+		"cmd.exe", gwCmd, rdpgwDir); err != nil {
 		report.step("Starting gateway", StepFailed, err.Error())
 		return nil, err
 	}

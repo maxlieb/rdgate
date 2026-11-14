@@ -30,7 +30,7 @@ func Gather(ctx context.Context, c Config) Status {
 		checkListening("Sign-in service", c.GiteaPort,
 			"Gitea is not listening. Check the log under the install folder."),
 		checkListening("Gateway service", c.RdpgwPort,
-			"rdpgw is not listening. Check the log under the install folder."),
+			"rdpgw is not listening. Its output is in rdpgw\\rdpgw.log under the install folder."),
 		checkListening("Web front end", c.CaddyListenPort(),
 			"Caddy is not listening, so nothing public reaches either service."),
 		checkTwoFactor(ctx, c),

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.23
+
+- The gateway's output is written to rdpgw\rdpgw.log, so a gateway that does not start leaves a log to read.
+
 ## 0.1.22
 
 - Publishing before setup no longer fails with "invalid port 0": the default port is used when the config is not saved yet.
