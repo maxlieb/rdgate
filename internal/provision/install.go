@@ -159,6 +159,7 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 
 	// --- OIDC client ----------------------------------------------------
 	report.step("Connecting gateway to sign-in", StepRunning, "")
+	gitea.RemoveSetupTokens(ctx, c.AdminUser, password)
 	token, err := gitea.CreateAdminToken(ctx, c.AdminUser)
 	if err != nil {
 		report.step("Connecting gateway to sign-in", StepFailed, err.Error())

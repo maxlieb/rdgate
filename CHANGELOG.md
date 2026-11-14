@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.17
+
+- Setup removes the access tokens that earlier setup runs created, so they do not pile up in the sign-in account.
+- Running setup again sets the admin password it shows, so the two agree.
+- Installer compression is faster.
+
 ## 0.1.16
 
 - Fixed "access token name has been used already" when setup runs again after an earlier attempt. Each run now uses its own token name.

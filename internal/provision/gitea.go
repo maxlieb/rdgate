@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -194,11 +195,60 @@ func (g Gitea) CreateAdmin(ctx context.Context, username, password string) error
 	if err != nil {
 		// Re-running the installer should not be fatal.
 		if strings.Contains(strings.ToLower(out), "already exists") {
+			// Setup ran before. Set the password this run reports, so the
+			// account and the password shown to the person agree.
+			if pout, perr := g.cli(ctx, "admin", "user", "change-password",
+				"--username", username, "--password", password,
+				"--must-change-password=false"); perr != nil {
+				return fmt.Errorf("updating the admin password: %s", reason(pout))
+			}
 			return nil
 		}
 		return fmt.Errorf("creating the admin user: %s", reason(out))
 	}
 	return nil
+}
+
+// RemoveSetupTokens deletes the access tokens that earlier setup runs made, so
+// they do not pile up on the account. Best effort: a failure here must not stop
+// setup, and the token made in this run is not touched.
+func (g Gitea) RemoveSetupTokens(ctx context.Context, username, password string) {
+	base := fmt.Sprintf("http://127.0.0.1:%d/api/v1/users/%s/tokens", g.Port, username)
+	client := &http.Client{Timeout: 30 * time.Second}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base, nil)
+	if err != nil {
+		return
+	}
+	req.SetBasicAuth(username, password)
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return
+	}
+	var tokens []struct {
+		Name string `json:"name"`
+	}
+	if json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&tokens) != nil {
+		return
+	}
+	for _, t := range tokens {
+		if !strings.HasPrefix(t.Name, "rdgw-setup-") {
+			continue
+		}
+		del, err := http.NewRequestWithContext(ctx, http.MethodDelete,
+			base+"/"+url.PathEscape(t.Name), nil)
+		if err != nil {
+			continue
+		}
+		del.SetBasicAuth(username, password)
+		if dresp, err := client.Do(del); err == nil {
+			dresp.Body.Close()
+		}
+	}
 }
 
 // CreateAdminToken mints a token the manager uses to read status.
