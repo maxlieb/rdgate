@@ -2,7 +2,7 @@
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "rdgate",
   "outputfilename": "rdgw-manager",
-  "frontend:dir": "frontend",
+  "frontend:dir": "../../frontend",
   "frontend:install": "",
   "frontend:build": "",
   "author": {

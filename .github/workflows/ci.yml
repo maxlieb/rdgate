@@ -32,13 +32,17 @@ jobs:
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
       - name: Build the desktop app
+        # wails.json lives beside main.go, so the CLI must run from there.
+        working-directory: cmd/rdgw-manager
         run: |
           go mod tidy
           wails build -tags wails -platform windows/amd64 -o rdgw-manager.exe
       - name: Build the installer
         run: |
           choco install innosetup -y --no-progress
-          copy build\bin\rdgw-manager.exe build\
+          mkdir build -Force
+          copy cmd\rdgw-manager\build\bin\rdgw-manager.exe build\
+          copy build\rdgwctl.exe build\ -ErrorAction SilentlyContinue
           "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\rdgw-manager.iss
       - uses: actions/upload-artifact@v4
         with:
