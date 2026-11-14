@@ -19,7 +19,6 @@ package main
 
 import (
 	"context"
-	"embed"
 	"log"
 	"os"
 	"path/filepath"
@@ -30,11 +29,9 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
+	"github.com/maxlieb/rdgw-manager/frontend"
 	"github.com/maxlieb/rdgw-manager/internal/ui"
 )
-
-//go:embed all:../../frontend
-var assets embed.FS
 
 func main() {
 	root := os.Getenv("ProgramData")
@@ -59,7 +56,7 @@ func main() {
 		MinWidth:  520,
 		MinHeight: 560,
 		AssetServer: &assetserver.Options{
-			Assets: assets,
+			Assets: frontend.Assets,
 		},
 		// The frontend reads prefers-color-scheme, so the window chrome
 		// should follow the system too rather than pinning one theme.
