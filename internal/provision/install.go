@@ -208,12 +208,7 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 	}
 
 	report.step("Starting gateway", StepRunning, "")
-	// Run through cmd so rdpgw's output lands in a file. A scheduled task has
-	// no console, so without this a failed start leaves nothing to read.
-	gwLog := winJoin(rdpgwDir, "rdpgw.log")
-	gwCmd := `/c ""` + rdpgwExe + `" --conf "` + winJoin(rdpgwDir, "rdpgw.yaml") + `" >> "` + gwLog + `" 2>&1"`
-	if err := RegisterTask(ctx, TaskGateway, "RD Gateway",
-		"cmd.exe", gwCmd, rdpgwDir); err != nil {
+	if err := RegisterGateway(ctx, c.InstallRoot); err != nil {
 		report.step("Starting gateway", StepFailed, err.Error())
 		return nil, err
 	}
@@ -348,4 +343,16 @@ func winDir(p string) string {
 		return p[:i]
 	}
 	return "."
+}
+
+// RegisterGateway (re)writes the gateway's scheduled task. It runs through cmd
+// so rdpgw's output lands in rdpgw\rdpgw.log: a scheduled task has no console,
+// so without this a failed start leaves nothing to read. Used by setup and by
+// the Repair action, which is how an older install gets the log.
+func RegisterGateway(ctx context.Context, installRoot string) error {
+	rdpgwDir := winJoin(installRoot, "rdpgw")
+	rdpgwExe := winJoin(rdpgwDir, "rdpgw.exe")
+	gwLog := winJoin(rdpgwDir, "rdpgw.log")
+	gwCmd := `/c ""` + rdpgwExe + `" --conf "` + winJoin(rdpgwDir, "rdpgw.yaml") + `" >> "` + gwLog + `" 2>&1"`
+	return RegisterTask(ctx, TaskGateway, "RD Gateway", "cmd.exe", gwCmd, rdpgwDir)
 }

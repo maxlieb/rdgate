@@ -435,7 +435,25 @@ func (a *App) OpenFunnelPage() error {
 }
 
 func (a *App) RestartGateway() error { return restart(provision.TaskGateway) }
-func (a *App) RestartSignIn() error  { return restart(provision.TaskSignIn) }
+
+// RepairGateway rewrites the gateway's scheduled task so it logs to a file,
+// then restarts it. Nothing is reinstalled and no settings change.
+func (a *App) RepairGateway() error {
+	a.mu.RLock()
+	root := a.cfg.InstallRoot
+	a.mu.RUnlock()
+	if root == "" {
+		return errors.New("this PC is not set up yet")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	if err := provision.RegisterGateway(ctx, root); err != nil {
+		return err
+	}
+	provision.StopTask(ctx, provision.TaskGateway)
+	return provision.StartTask(ctx, provision.TaskGateway)
+}
+func (a *App) RestartSignIn() error { return restart(provision.TaskSignIn) }
 
 func restart(task string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

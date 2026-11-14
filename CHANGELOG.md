@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.24
+
+- Dashboard: "Repair gateway" rewrites the gateway's scheduled task so it logs to rdpgw\rdpgw.log, then restarts it. Nothing is reinstalled.
+
 ## 0.1.23
 
 - The gateway's output is written to rdpgw\rdpgw.log, so a gateway that does not start leaves a log to read.
