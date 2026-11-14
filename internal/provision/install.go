@@ -127,6 +127,10 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 		return nil, err
 	}
 	report.step("Account", StepRunning, "creating "+c.AdminUser)
+	if _, err := EnsureGitBinary(winJoin(c.InstallRoot, "git")); err != nil {
+		report.step("Sign-in service", StepFailed, err.Error())
+		return nil, err
+	}
 	if err := gitea.Migrate(ctx); err != nil {
 		report.step("Account", StepFailed, err.Error())
 		return nil, err

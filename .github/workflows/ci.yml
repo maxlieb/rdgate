@@ -78,6 +78,18 @@ jobs:
           Pop-Location
           Copy-Item rdpgw-src\LICENSE build\rdpgw-LICENSE.txt
 
+      - name: Fetch Git (MinGit, GPL-2.0) for the installer
+        # The latest Git for Windows release. MinGit is the portable build, so
+        # the installer carries Git and the person does not need it installed.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $url = gh api repos/git-for-windows/git/releases/latest --jq '.assets[] | select(.name | test("^MinGit-.*-64-bit\\.zip$")) | .browser_download_url'
+          if (-not $url) { throw "No MinGit asset in the latest Git for Windows release" }
+          Invoke-WebRequest -Uri $url -OutFile mingit.zip
+          Expand-Archive -Path mingit.zip -DestinationPath build\git -Force
+          Remove-Item mingit.zip
+
       - name: Restore the Wails CLI from cache
         id: wails-cache
         uses: actions/cache@v4

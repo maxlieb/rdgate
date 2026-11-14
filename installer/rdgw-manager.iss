@@ -9,7 +9,7 @@
 ; Expects build\rdgw-manager.exe and build\rdgwctl.exe to exist.
 
 #define AppName       "RD Gateway Manager"
-#define AppVersion    "0.1.10"
+#define AppVersion    "0.1.11"
 #define AppPublisher  "Max Lieberman"
 #define AppExe        "rdgw-manager.exe"
 #define CtlExe        "rdgwctl.exe"
@@ -49,6 +49,7 @@ Source: "..\build\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\{#CtlExe}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\rdpgw.exe";         DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\rdpgw-LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\build\git\*"; DestDir: "{app}\git"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\README.md";       DestDir: "{app}"; Flags: ignoreversion isreadme
 
 [Dirs]

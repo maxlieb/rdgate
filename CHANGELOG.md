@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.11
+
+- Git is included in the installer, so account setup no longer fails with "git not found" on a PC without Git.
+
 ## 0.1.10
 
 - When Tailscale is installed but this PC is not connected to it, the wizard now explains what to do: open Tailscale, sign in, and connect this PC to your tailnet. It continues on its own once connected. The sign-in button was removed.

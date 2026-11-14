@@ -135,6 +135,11 @@ func GiteaAppIni(c Config, secretKey, internalToken string) (string, error) {
 	b.WriteString("DISABLE_SSH  = true\n")
 	b.WriteString("OFFLINE_MODE = true\n\n")
 
+	// Gitea refuses to start its database without git, and the one it needs is
+	// the copy the installer put under the install root.
+	b.WriteString("[git]\n")
+	b.WriteString("PATH = " + winJoin(c.InstallRoot, "git", "cmd", "git.exe") + "\n\n")
+
 	b.WriteString("[database]\n")
 	b.WriteString("DB_TYPE = sqlite3\n")
 	b.WriteString("PATH    = " + winJoin(giteaDir, "data", "gitea.db") + "\n\n")
