@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Error messages from the gateway's account setup now show the real cause instead of an unrelated warning.
+
 ## 0.1.3
 
 - The gateway program (rdpgw) is now included in the installer. There is no longer a manual build step.

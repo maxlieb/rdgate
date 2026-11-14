@@ -183,7 +183,7 @@ func (g Gitea) CreateAdmin(ctx context.Context, username, password string) error
 		if strings.Contains(strings.ToLower(out), "already exists") {
 			return nil
 		}
-		return fmt.Errorf("creating the admin user: %s", firstLine(out))
+		return fmt.Errorf("creating the admin user: %s", reason(out))
 	}
 	return nil
 }
@@ -197,7 +197,7 @@ func (g Gitea) CreateAdminToken(ctx context.Context, username string) (string, e
 	out, err := g.cli(ctx, "admin", "user", "generate-access-token",
 		"--username", username, "--scopes", "read:admin", "--raw")
 	if err != nil {
-		return "", fmt.Errorf("generating an access token: %s", firstLine(out))
+		return "", fmt.Errorf("generating an access token: %s", reason(out))
 	}
 	// --raw prints the bare token, but CLI builds have historically prefixed
 	// it with noise, so take the last non-empty line and sanity check it.

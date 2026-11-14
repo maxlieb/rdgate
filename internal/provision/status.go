@@ -269,6 +269,38 @@ func checkRDPEnabled() Check {
 		Hint:   "Turn on Remote Desktop under Settings, System, Remote Desktop."}
 }
 
+// reason picks the lines that explain a failure from a command's output. Gitea
+// logs harmless warnings first and the real error last, so showing the first
+// line shows the wrong thing. This keeps the lines marked as errors, and falls
+// back to the last few lines when none are marked.
+func reason(s string) string {
+	var marked, tail []string
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	for _, l := range lines {
+		t := strings.TrimSpace(l)
+		if t == "" {
+			continue
+		}
+		low := strings.ToLower(t)
+		if strings.Contains(t, "[F]") || strings.Contains(t, "[E]") ||
+			strings.Contains(low, "fatal") || strings.Contains(low, "error") {
+			marked = append(marked, t)
+		}
+	}
+	if len(marked) > 0 {
+		return strings.Join(marked, " | ")
+	}
+	for _, l := range lines {
+		if t := strings.TrimSpace(l); t != "" {
+			tail = append(tail, t)
+		}
+	}
+	if len(tail) > 3 {
+		tail = tail[len(tail)-3:]
+	}
+	return strings.Join(tail, " | ")
+}
+
 func firstLine(s string) string {
 	if i := strings.IndexByte(s, '\n'); i >= 0 {
 		return s[:i]
