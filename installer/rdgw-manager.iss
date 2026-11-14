@@ -25,7 +25,7 @@ UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\{#AppExe}
 OutputDir=..\dist
 OutputBaseFilename=RDGatewayManager-Setup-{#AppVersion}
-Compression=lzma2
+Compression=lzma2/fast
 SolidCompression=yes
 WizardStyle=modern
 
