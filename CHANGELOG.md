@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.12
+
+- Fixed "The task XML is malformed" when the sign-in service is registered. The task definition now follows Windows' element order and declares the encoding it is saved in.
+
 ## 0.1.11
 
 - Git is included in the installer, so account setup no longer fails with "git not found" on a PC without Git.

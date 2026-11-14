@@ -44,10 +44,11 @@ type taskXML struct {
 
 	Principals struct {
 		Principal struct {
-			ID        string `xml:"id,attr"`
-			UserID    string `xml:"UserId"`
-			RunLevel  string `xml:"RunLevel"`
+			ID     string `xml:"id,attr"`
+			UserID string `xml:"UserId"`
+			// The schema is a sequence: LogonType must come before RunLevel.
 			LogonType string `xml:"LogonType"`
+			RunLevel  string `xml:"RunLevel"`
 		} `xml:"Principal"`
 	} `xml:"Principals"`
 
@@ -77,6 +78,8 @@ type taskXML struct {
 		} `xml:"Exec"`
 	} `xml:"Actions"`
 }
+
+const taskXMLHeader = `<?xml version="1.0" encoding="UTF-16"?>` + "\n"
 
 // BuildTaskXML renders the task definition. Exported so it can be tested
 // without a Windows host, and so the UI can show it if anyone asks what
@@ -120,9 +123,9 @@ func BuildTaskXML(description, command, arguments, workingDir string) (string, e
 	if err != nil {
 		return "", err
 	}
-	// schtasks requires UTF-16LE with a BOM in practice, but it also accepts
-	// this declaration when the file is written as UTF-16; see RegisterTask.
-	return xml.Header + string(body), nil
+	// The file is written as UTF-16LE (see RegisterTask), so the declaration
+	// must say so; a UTF-8 declaration on UTF-16 bytes is malformed to schtasks.
+	return taskXMLHeader + string(body), nil
 }
 
 // RegisterTask creates or replaces a startup task.
