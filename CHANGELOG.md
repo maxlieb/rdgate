@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.9
+
+- Tailscale is installed from winget's own source. The Microsoft Store source failed with a certificate error on some networks, and the wizard's command now names the source.
+- "Sign in to Tailscale" reads the sign-in address that Tailscale prints, opens it in your browser, and shows it on screen in case the browser does not open.
+- If Tailscale's sign-in command fails, the error is shown instead of the step appearing to do nothing.
+
 ## 0.1.8
 
 - Tailscale is no longer installed from inside the app. The wizard opens Tailscale's download page and shows the winget command to copy, then you press Check again.
