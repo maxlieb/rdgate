@@ -97,7 +97,10 @@ jobs:
       - name: Build the desktop app
         # wails.json lives beside main.go, so the CLI must run from there.
         working-directory: cmd/rdgw-manager
-        run: wails build -tags wails -platform windows/amd64 -o rdgw-manager.exe
+        run: |
+          # go.mod does not list Wails until tidy adds it, so this must stay.
+          go mod tidy
+          wails build -tags wails -platform windows/amd64 -o rdgw-manager.exe
       - name: Build the installer
         run: |
           # Installing Inno Setup takes a while, so skip it when the runner already has it.
