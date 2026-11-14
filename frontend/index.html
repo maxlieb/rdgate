@@ -826,14 +826,15 @@ function buildTailscale(w) {
   return frag;
 }
 
+// The gateway program ships inside the installer, so this step normally
+// completes by itself. It is only shown if the bundled copy is missing, and
+// the fix is to reinstall, not to build anything.
 function buildRdpgw(w) {
   const frag = document.createDocumentFragment();
   frag.appendChild(note(
-    "The gateway program is not published as a ready-made download, so it has " +
-    "to be built once and copied to:<br><code>" + escapeHTML(w.rdpgwExpectedAt) + "</code>"));
-  frag.appendChild(note(
-    "Build it with:<br><code>GOOS=windows GOARCH=amd64 go build -o rdpgw.exe ./cmd/rdpgw</code>"));
-  frag.appendChild(actions(button("I've copied it", () => pollWizard(), true)));
+    "The gateway program is missing from this installation. Reinstall the app " +
+    "and it will be put back in place."));
+  frag.appendChild(actions(button("Check again", () => pollWizard(), true)));
   return frag;
 }
 

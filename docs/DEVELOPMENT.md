@@ -58,8 +58,8 @@ builds and tests anywhere without a module proxy.
 
 ## Prerequisites
 
-**rdpgw.exe.** Upstream publishes no Windows binary, but Windows is a supported
-target — the tree carries `cmd/rdpgw/protocol/gateway_windows.go`:
+**rdpgw.exe.** The installer builds it in CI from the pinned `v9.0.1` tag and
+ships it beside the app. To build it by hand, which is only needed off CI:
 
 ```
 git clone https://github.com/bolkedebruin/rdpgw
@@ -67,8 +67,7 @@ cd rdpgw
 GOOS=windows GOARCH=amd64 go build -o rdpgw.exe ./cmd/rdpgw
 ```
 
-Place it at `C:\ProgramData\RDGateway\rdpgw\rdpgw.exe`. The installer checks and
-refuses rather than part-installing.
+The app copies it to `C:\ProgramData\RDGateway\rdpgw\rdpgw.exe` on install.
 
 **Funnel permission.** Funnel has to be allowed for the node in the tailnet
 policy file (`nodeAttrs` with the `funnel` attribute). Without it the publish

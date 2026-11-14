@@ -38,6 +38,16 @@ jobs:
         run: go test ./...
       - name: Build the CLI for Windows
         run: go build -o build/rdgwctl.exe ./cmd/rdgwctl
+      - name: Build the gateway program (rdpgw, Apache-2.0)
+        # Pinned to a release tag so the bundled binary is reproducible.
+        # Its LICENSE ships next to it, as Apache-2.0 requires for redistribution.
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          git clone --depth 1 --branch v9.0.1 https://github.com/bolkedebruin/rdpgw rdpgw-src
+          Push-Location rdpgw-src
+          go build -o ..\build\rdpgw.exe ./cmd/rdpgw
+          Pop-Location
+          Copy-Item rdpgw-src\LICENSE build\rdpgw-LICENSE.txt
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
       - name: Build the desktop app

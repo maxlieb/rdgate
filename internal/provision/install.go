@@ -186,9 +186,9 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 	report.step("Gateway configuration", StepDone, "")
 
 	rdpgwExe := winJoin(rdpgwDir, "rdpgw.exe")
-	if _, err := os.Stat(rdpgwExe); err != nil {
-		report.step("Starting gateway", StepFailed, "rdpgw.exe is not in "+rdpgwDir)
-		return nil, fmt.Errorf("rdpgw.exe must be placed at %s before installing", rdpgwExe)
+	if err := EnsureGatewayBinary(rdpgwExe); err != nil {
+		report.step("Starting gateway", StepFailed, err.Error())
+		return nil, err
 	}
 
 	report.step("Starting gateway", StepRunning, "")

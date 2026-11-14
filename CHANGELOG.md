@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- The gateway program (rdpgw) is now included in the installer. There is no longer a manual build step.
+- rdpgw's Apache-2.0 license ships alongside it.
+
 ## 0.1.2
 
 - Stopped a console window from flashing on screen each time the app runs a Windows tool such as Tailscale, netsh or schtasks.

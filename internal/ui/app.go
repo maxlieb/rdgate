@@ -116,6 +116,7 @@ func (a *App) Wizard() WizardState {
 		AlreadyInstalled: installed,
 		RdpgwExpectedAt:  root + `\rdpgw\rdpgw.exe`,
 	}
+	_ = provision.EnsureGatewayBinary(st.RdpgwExpectedAt)
 	if _, err := os.Stat(st.RdpgwExpectedAt); err == nil {
 		st.RdpgwPresent = true
 	}
