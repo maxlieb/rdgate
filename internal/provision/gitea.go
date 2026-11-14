@@ -170,6 +170,18 @@ func (g Gitea) cli(ctx context.Context, args ...string) (string, error) {
 	return strings.TrimSpace(string(out)), err
 }
 
+// Migrate creates Gitea's database tables. Gitea makes them when it starts,
+// but the admin commands run before that, against an empty database, and fail
+// with "no such table: user". Running migrations first is what the web
+// installer would otherwise do. It is safe to run again.
+func (g Gitea) Migrate(ctx context.Context) error {
+	out, err := g.cli(ctx, "migrate")
+	if err != nil {
+		return fmt.Errorf("preparing the sign-in database: %s", reason(out))
+	}
+	return nil
+}
+
 // CreateAdmin provisions the single account. Gitea is configured with
 // registration disabled, so this is the only way in.
 func (g Gitea) CreateAdmin(ctx context.Context, username, password string) error {

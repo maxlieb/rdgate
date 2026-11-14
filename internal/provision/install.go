@@ -127,6 +127,10 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 		return nil, err
 	}
 	report.step("Account", StepRunning, "creating "+c.AdminUser)
+	if err := gitea.Migrate(ctx); err != nil {
+		report.step("Account", StepFailed, err.Error())
+		return nil, err
+	}
 	if err := gitea.CreateAdmin(ctx, c.AdminUser, password); err != nil {
 		report.step("Account", StepFailed, err.Error())
 		return nil, err

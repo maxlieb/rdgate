@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5
+
+- Fixed account setup failing with "no such table: user". The sign-in database is now created before the admin account.
+
 ## 0.1.4
 
 - Error messages from the gateway's account setup now show the real cause instead of an unrelated warning.
