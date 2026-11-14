@@ -208,11 +208,20 @@ func (t *Tailscale) FunnelActive(ctx context.Context) (bool, string, error) {
 	if err != nil {
 		return false, out, err
 	}
-	// "No serve config" is what an unconfigured node reports.
+	return funnelOutputActive(out), out, nil
+}
+
+// funnelOutputActive reads `tailscale funnel status`. We publish TCP with TLS
+// termination, which prints "tcp://<name>:443 (TLS terminated)" and no
+// "https://" line, so both forms count. An unconfigured node prints nothing
+// or "No serve config".
+func funnelOutputActive(out string) bool {
 	if out == "" || strings.Contains(strings.ToLower(out), "no serve config") {
-		return false, out, nil
+		return false
 	}
-	return strings.Contains(out, "https://"), out, nil
+	return strings.Contains(out, "https://") ||
+		strings.Contains(out, "TLS terminated") ||
+		strings.Contains(out, "Funnel on")
 }
 
 // ResetFunnel withdraws everything this tool published. Called on uninstall.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.29
+
+- The public-address check recognises the TCP Funnel the app publishes. Before, a working Funnel was reported as "not published".
+
 ## 0.1.28
 
 - Publishing no longer hangs forever when Tailscale leaves a helper process running. Commands are cut off a few seconds after their timeout.
