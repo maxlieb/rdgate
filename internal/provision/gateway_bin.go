@@ -40,48 +40,28 @@ func EnsureGatewayBinary(dst string) error {
 	return out.Close()
 }
 
-// EnsureGatewayTemplates copies the gateway's web pages into dstDir/templates.
-// rdpgw reads them from its working directory and falls back to a bare page
-// without them, which has no working server list. Unlike the binary, these are
-// copied every time, so an upgrade or a Repair brings in new pages.
+// EnsureGatewayTemplates copies the gateway's web pages and logos into the
+// gateway folder: templates\ for the pages, assets\ for the logos. rdpgw reads
+// them from its working directory, and without them the pages fall back to a
+// bare version with no server list and broken images. These are copied every
+// time, so an upgrade or a Repair brings in new files.
 func EnsureGatewayTemplates(dstDir string) error {
 	self, err := os.Executable()
 	if err != nil {
 		return err
 	}
-	src := filepath.Join(filepath.Dir(self), "rdpgw-templates")
-	if _, err := os.Stat(src); err != nil {
-		return fmt.Errorf("the gateway's web pages are missing from the installation (%s); reinstall the app", src)
+	base := filepath.Dir(self)
+	for _, pair := range [][2]string{
+		{"rdpgw-templates", "templates"},
+		{"rdpgw-assets", "assets"},
+	} {
+		src := filepath.Join(base, pair[0])
+		if _, err := os.Stat(src); err != nil {
+			return fmt.Errorf("the gateway's %s are missing from the installation (%s); reinstall the app", pair[1], src)
+		}
+		if err := copyTree(src, filepath.Join(dstDir, pair[1])); err != nil {
+			return err
+		}
 	}
-	dst := filepath.Join(dstDir, "templates")
-	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-		target := filepath.Join(dst, rel)
-		if d.IsDir() {
-			return os.MkdirAll(target, 0o700)
-		}
-		in, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer in.Close()
-		if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
-			return err
-		}
-		out, err := os.Create(target)
-		if err != nil {
-			return err
-		}
-		if _, err := io.Copy(out, in); err != nil {
-			out.Close()
-			return err
-		}
-		return out.Close()
-	})
+	return nil
 }

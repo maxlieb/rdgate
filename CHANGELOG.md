@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.32
+
+- The sign-in and server pages show their logos. The gateway's assets folder ships with the installer and is copied into place on setup and on Repair.
+
 ## 0.1.31
 
 - "Repair gateway" is always on the dashboard footer, not only when the gateway check fails. Use it to copy the web pages into place on an existing install.
