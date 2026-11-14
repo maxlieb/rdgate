@@ -99,7 +99,9 @@ func BuildTaskXML(description, command, arguments, workingDir string) (string, e
 	t.Principals.Principal.ID = "Author"
 	t.Principals.Principal.UserID = "S-1-5-18" // SYSTEM, by SID so it is locale independent
 	t.Principals.Principal.RunLevel = "HighestAvailable"
-	t.Principals.Principal.LogonType = "ServiceAccount"
+	// LogonType is left out on purpose: "ServiceAccount" is not a value in the
+	// schema version used here, and Task Scheduler rejects the whole task for it.
+	// SYSTEM by SID with RunLevel is enough to run the task as SYSTEM.
 
 	t.Settings.MultipleInstancesPolicy = "IgnoreNew"
 	t.Settings.DisallowStartIfOnBatteries = false
