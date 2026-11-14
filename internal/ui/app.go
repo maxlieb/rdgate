@@ -385,26 +385,43 @@ func (a *App) TailscaleLogin() (string, error) {
 		return "", errors.New("could not start Tailscale sign-in: " + err.Error())
 	}
 
-	found := make(chan string, 1)
+	found := make(chan loginResult, 1)
 	go func() {
 		sent := false
+		last := ""
 		sc := bufio.NewScanner(out)
 		for sc.Scan() {
-			if u := findLoginURL(sc.Text()); u != "" && !sent {
-				found <- u
+			t := strings.TrimSpace(sc.Text())
+			if t != "" {
+				last = t
+			}
+			if u := findLoginURL(t); u != "" && !sent {
+				found <- loginResult{url: u}
 				sent = true
 			}
 		}
-		close(found) // nothing more to read: a closed channel yields ""
-		_ = cmd.Wait()
+		werr := cmd.Wait()
+		if !sent {
+			// Exiting without an address is not "already signed in" when the
+			// command failed, for example because the Tailscale service is
+			// still starting. Say what it printed instead of staying silent.
+			if werr != nil {
+				found <- loginResult{err: errors.New("tailscale up failed: " + last)}
+			} else {
+				found <- loginResult{} // exited cleanly without a prompt: already signed in
+			}
+		}
 	}()
 
 	select {
-	case u := <-found:
-		if u != "" {
-			_ = openURL(u) // best effort; the wizard also shows the address
+	case r := <-found:
+		if r.err != nil {
+			return "", r.err
 		}
-		return u, nil
+		if r.url != "" {
+			_ = openURL(r.url) // best effort; the wizard also shows the address
+		}
+		return r.url, nil
 	case <-time.After(20 * time.Second):
 		return "", errors.New("Tailscale did not give a sign-in address. Click the Tailscale icon in the tray and choose Log in.")
 	}
