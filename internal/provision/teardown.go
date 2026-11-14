@@ -33,10 +33,10 @@ func Uninstall(ctx context.Context, c Config, opts UninstallOptions, report Repo
 	var errs []error
 
 	report.step("Stopping services", StepRunning, "")
-	for _, name := range []string{TaskGateway, TaskSignIn, TaskCaddy, TaskDDNS} {
+	for _, name := range []string{TaskGateway, TaskSignIn, TaskGate, TaskCaddy, TaskDDNS} {
 		StopTask(ctx, name)
 	}
-	for _, name := range []string{TaskGateway, TaskSignIn, TaskCaddy, TaskDDNS} {
+	for _, name := range []string{TaskGateway, TaskSignIn, TaskGate, TaskCaddy, TaskDDNS} {
 		if err := RemoveTask(ctx, name); err != nil {
 			errs = append(errs, err)
 		}

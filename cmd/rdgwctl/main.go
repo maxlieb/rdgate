@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/maxlieb/rdgw-manager/internal/gate"
 	"github.com/maxlieb/rdgw-manager/internal/provision"
 )
 
@@ -38,6 +39,9 @@ func main() {
 		err = cmdInstall(ctx, os.Args[2:])
 	case "uninstall":
 		err = cmdUninstall(ctx, os.Args[2:])
+	case "gate":
+		// Runs until stopped, like keepalive.
+		err = cmdGate(os.Args[2:])
 	case "keepalive":
 		// Runs until stopped, so it must not inherit the two-minute limit.
 		err = cmdKeepalive(context.Background(), os.Args[2:])
@@ -70,6 +74,7 @@ func usage() {
   check-direct                        can this connection be reached directly?
   relay-script [-config FILE]         print the setup script for the relay server
   keepalive  [-config FILE]           (background task) keep port + DNS current
+  gate       [-listen A] [-gitea U]   (background task) require two-factor at sign-in
   uninstall  [-config FILE] [-purge]  remove services, optionally delete data
 
 "render" touches nothing on disk. Use it to read the generated rdpgw.yaml and
@@ -513,3 +518,12 @@ type multiFlag []string
 
 func (m *multiFlag) String() string     { return strings.Join(*m, ",") }
 func (m *multiFlag) Set(v string) error { *m = append(*m, v); return nil }
+
+func cmdGate(args []string) error {
+	fs := flag.NewFlagSet("gate", flag.ExitOnError)
+	listen := fs.String("listen", fmt.Sprintf("127.0.0.1:%d", provision.DefaultGatePort), "loopback address to serve on")
+	gitea := fs.String("gitea", fmt.Sprintf("http://127.0.0.1:%d", provision.DefaultGiteaPort), "Gitea base URL")
+	_ = fs.Parse(args)
+	fmt.Println(time.Now().Format("15:04:05"), "sign-in gate listening on", *listen)
+	return gate.Serve(context.Background(), *listen, *gitea)
+}

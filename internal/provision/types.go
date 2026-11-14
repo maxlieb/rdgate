@@ -14,6 +14,8 @@ import "time"
 const (
 	DefaultRdpgwPort = 8080
 	DefaultGiteaPort = 3000
+	// DefaultGatePort is the sign-in gate. Caddy asks it before an OAuth code is issued.
+	DefaultGatePort = 8082
 
 	// Caddy sits in front of both services and is the only thing the front
 	// door talks to. It listens on loopback in funnel mode and on :443 in

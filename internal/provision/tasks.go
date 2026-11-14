@@ -13,6 +13,7 @@ const (
 	TaskGateway = "RDGateway-Gateway"
 	TaskSignIn  = "RDGateway-SignIn"
 	TaskCaddy   = "RDGateway-Web"
+	TaskGate    = "RDGateway-Gate"
 	TaskDDNS    = "RDGateway-Address"
 )
 

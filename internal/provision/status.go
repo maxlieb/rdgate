@@ -3,8 +3,10 @@ package provision
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -209,12 +211,31 @@ func checkListening(name string, port int, hint string) Check {
 // Enrollment is enforced in app.ini so a new user cannot get past it, but this
 // still catches a config that predates the enforcement setting.
 func checkTwoFactor(ctx context.Context, c Config) Check {
-	// Gitea's admin API cannot filter users by two-factor status: the query
-	// returned every account, so this used to report "enrolled" for anyone.
-	// Until enrollment is enforced on the sign-in path, say so instead.
+	// The gate checks each account when it signs in, so there is no list of
+	// who is enrolled to read. What can be checked is that the gate is
+	// running and that Caddy sends the sign-in steps through it.
 	const name = "Two-factor"
-	return Check{Name: name, State: StateUnknown, Detail: "not enforced yet",
-		Hint: "Sign-in does not yet require two-factor. Do not share the address until it does."}
+	cfg, err := os.ReadFile(NewCaddy(c).Caddyfile)
+	if err != nil || !strings.Contains(string(cfg), fmt.Sprintf("forward_auth @gated 127.0.0.1:%d", DefaultGatePort)) {
+		return Check{Name: name, State: StateFail, Detail: "not enforced",
+			Hint: "Sign-in is not routed through the two-factor gate. Use Repair gateway."}
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(probeCtx, http.MethodGet,
+		fmt.Sprintf("http://127.0.0.1:%d/healthz", DefaultGatePort), nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return Check{Name: name, State: StateFail, Detail: "gate not running",
+			Hint: "Sign-in is refused until the gate runs. Use Repair gateway. Its output is in gate.log under the install folder."}
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return Check{Name: name, State: StateFail, Detail: "gate not healthy",
+			Hint: "Use Repair gateway. Its output is in gate.log under the install folder."}
+	}
+	return Check{Name: name, State: StateOK, Detail: "required at sign-in",
+		Hint: "An account without two-factor cannot get a sign-in code."}
 }
 
 // checkRDPEnabled catches the embarrassing case where the whole stack is

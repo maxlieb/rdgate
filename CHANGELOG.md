@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.34
+
+- Sign-in requires two-factor. Caddy sends the two OAuth steps that issue a sign-in code through a small gate first. An account without two-factor turned on gets a page that says so, and no code. Accounts with two-factor, and anyone not yet signed in, go through as before.
+- The Two-factor line now reports whether the gate is running and routed. "Repair gateway" installs the gate and its routes on an existing setup.
+
 ## 0.1.33
 
 - Dashboard: Stop gateway, Start gateway, and Change password. The new password is shown once, like at setup.

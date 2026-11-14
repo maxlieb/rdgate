@@ -119,7 +119,16 @@ func Caddyfile(c Config) (string, error) {
 
 	// flush_interval -1 matters for RD Gateway: the outbound channel is one
 	// long response that must be forwarded as bytes arrive, not buffered.
+	// The two OAuth steps that issue a code pass the sign-in gate first. It
+	// refuses an account without two-factor. Everything else goes straight to
+	// Gitea, and a gate that is down refuses these two steps rather than
+	// letting them through.
+	gate := fmt.Sprintf("127.0.0.1:%d", DefaultGatePort)
 	routes := "\thandle_path " + AuthPath + "/* {\n" +
+		"\t\t@gated path /login/oauth/authorize /login/oauth/grant\n" +
+		"\t\tforward_auth @gated " + gate + " {\n" +
+		"\t\t\turi /check\n" +
+		"\t\t}\n" +
 		"\t\treverse_proxy " + gitea + "\n" +
 		"\t}\n" +
 		"\thandle {\n" +

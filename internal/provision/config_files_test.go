@@ -389,3 +389,21 @@ func TestRandomStringUsesOnlyAlphabet(t *testing.T) {
 		}
 	}
 }
+
+// The two steps that issue a code must go through the gate, before Gitea.
+// Dropping either line would let an account without two-factor sign in.
+func TestCaddyRoutesOAuthCodeStepsThroughGate(t *testing.T) {
+	out, err := Caddyfile(validConfig(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	gated := strings.Index(out, "@gated path /login/oauth/authorize /login/oauth/grant")
+	gate := strings.Index(out, "forward_auth @gated 127.0.0.1:8082")
+	gitea := strings.Index(out, "reverse_proxy 127.0.0.1:3000")
+	if gated < 0 || gate < 0 || gitea < 0 {
+		t.Fatalf("gate route missing:\n%s", out)
+	}
+	if !(gated < gate && gate < gitea) {
+		t.Fatalf("gate must come before Gitea in the route:\n%s", out)
+	}
+}

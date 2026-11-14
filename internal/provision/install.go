@@ -157,6 +157,13 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 	}
 	report.step("Starting sign-in service", StepDone, "listening")
 
+	report.step("Sign-in gate", StepRunning, "")
+	if err := RegisterSignInGate(ctx, c); err != nil {
+		report.step("Sign-in gate", StepFailed, err.Error())
+		return nil, err
+	}
+	report.step("Sign-in gate", StepDone, "requiring two-factor for sign-in")
+
 	// --- OIDC client ----------------------------------------------------
 	report.step("Connecting gateway to sign-in", StepRunning, "")
 	gitea.RemoveSetupTokens(ctx, c.AdminUser, password)
@@ -383,5 +390,42 @@ func RepairGateway(ctx context.Context, c Config) error {
 		return err
 	}
 	StopTask(ctx, TaskGateway)
-	return StartTask(ctx, TaskGateway)
+	if err := StartTask(ctx, TaskGateway); err != nil {
+		return err
+	}
+	return nil
+}
+
+// RepairSignIn brings the sign-in gate and its Caddy routes up to date. An
+// installation from before the gate existed has neither, so this is what
+// makes two-factor enforcement reach it without a reinstall.
+func RepairSignIn(ctx context.Context, c Config) error {
+	if err := RegisterSignInGate(ctx, c); err != nil {
+		return err
+	}
+	caddy := NewCaddy(c)
+	if err := caddy.WriteConfig(c); err != nil {
+		return err
+	}
+	StopTask(ctx, TaskCaddy)
+	return StartTask(ctx, TaskCaddy)
+}
+
+// RegisterSignInGate (re)writes the gate's scheduled task and starts it. It
+// runs rdgwctl, which is already on disk for the address updater.
+func RegisterSignInGate(ctx context.Context, c Config) error {
+	ctl, err := ctlPath()
+	if err != nil {
+		return err
+	}
+	// Through cmd.exe so its output lands in a file. The task scheduler
+	// discards it otherwise, and a gate that refuses sign-ins needs a log.
+	logFile := winJoin(c.InstallRoot, "gate.log")
+	cmdArgs := fmt.Sprintf(`/c ""%s" gate -listen 127.0.0.1:%d -gitea http://127.0.0.1:%d >> "%s" 2>&1"`,
+		ctl, DefaultGatePort, c.GiteaPort, logFile)
+	if err := RegisterTask(ctx, TaskGate, "RD Gateway sign-in gate", "cmd.exe", cmdArgs, c.InstallRoot); err != nil {
+		return err
+	}
+	StopTask(ctx, TaskGate)
+	return StartTask(ctx, TaskGate)
 }

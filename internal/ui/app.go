@@ -460,7 +460,12 @@ func (a *App) RepairGateway() error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
-	return provision.RepairGateway(ctx, cfg)
+	if err := provision.RepairGateway(ctx, cfg); err != nil {
+		return err
+	}
+	// The sign-in gate and its routes come with Repair too, so an install
+	// from before two-factor enforcement is brought up to date.
+	return provision.RepairSignIn(ctx, cfg)
 }
 func (a *App) RestartSignIn() error { return restart(provision.TaskSignIn) }
 
