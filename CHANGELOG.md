@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.43
+
+- Releases are signed with RDGate's self-signed certificate, so the installer and the program files are trusted once the signed version is installed. Updates from this version on install from the app itself.
+
 ## 0.1.42
 
 - Signed releases: the installer trusts RDGate's self-signed certificate on first install, so later updates signed with it install without publisher warnings. Set up once with `installer\tools\new-signing-cert.ps1`.

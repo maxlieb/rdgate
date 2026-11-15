@@ -29,7 +29,7 @@ import (
 
 // Version is the release this build belongs to. It must match AppVersion in
 // installer/rdgw-manager.iss; a test checks that, so a release cannot drift.
-const Version = "0.1.42"
+const Version = "0.1.43"
 
 // Where releases are published. Overridable in tests.
 const latestAPI = "https://api.github.com/repos/maxlieb/rdgate/releases/latest"
