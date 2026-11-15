@@ -1069,9 +1069,8 @@ function buildAddress(w) {
   err.className = "verdict-box"; err.dataset.state = "bad"; err.hidden = true;
 
   if (wiz.door === "relay") {
-    frag.appendChild(note("This is the address people will type. Buy one at any registrar " +
-      "(around $10 a year), or use a subdomain of a domain you already own, such as " +
-      "<code>rdgw.yourdomain.com</code>."));
+    frag.appendChild(note("This is the address people will type. Buy a domain name, or use a subdomain " +
+      "of one you already own, such as <code>rdgw.yourdomain.com</code>. The next step can help you buy one."));
     fields.append(
       field("Domain name", "domain", { placeholder: "rdgw.example.com" }),
       field("Email for certificate notices (optional)", "email", { placeholder: "you@example.com" }));
@@ -1481,22 +1480,22 @@ function relayGuide(r) {
   const ol = document.createElement("ol");
   const domain = escapeHTML(r.config.publicDomain);
   [
-    "<b>Get a free server.</b> Create an Oracle Cloud account (the &ldquo;Always Free&rdquo; tier needs a card " +
-      "for verification and is not charged). Create a virtual machine with <b>Ubuntu</b>, and keep its public address.",
-    "<b>Open the web ports.</b> In Oracle&rsquo;s console go to the machine&rsquo;s network, then Security Lists, " +
-      "and add an ingress rule from <code>0.0.0.0/0</code> for TCP ports <code>80</code> and <code>443</code>.",
-    "<b>Point your domain at it.</b> At your domain provider add an <code>A</code> record: " +
-      "<code>" + domain + "</code> &rarr; the server&rsquo;s public address.",
-    "<b>Run the script.</b> Connect to the server with SSH, paste the script below, and sign in to Tailscale " +
-      "with the <b>same account as this PC</b> when it shows a link.",
+    "<b>Get a server.</b> Create a free Ubuntu server at Oracle. Oracle asks for a card to check your identity, " +
+      "but the free server is not charged. Keep the server&rsquo;s public IP address.",
+    "<b>Point your domain at it.</b> In your domain&rsquo;s DNS settings, add an <code>A</code> record for " +
+      "<code>" + domain + "</code> that points at that IP address.",
+    "<b>Run the script.</b> Connect to the server (Oracle&rsquo;s page for the server shows how), paste the script " +
+      "below, and sign in to Tailscale with the <b>same account as this PC</b> when it shows a link.",
     "<b>Test it.</b> Press the button below. A green result means the whole path works.",
   ].forEach(h => { const li = document.createElement("li"); li.innerHTML = h; ol.appendChild(li); });
   g.appendChild(ol);
+
   const help = document.createElement("div");
   help.className = "actions";
   help.append(
-    button("Oracle: Always Free resources", () => callBackend("OpenHelp", "oracle-free"), true),
-    button("Oracle: cloud free tier guide", () => callBackend("OpenHelp", "oracle-learn"), true));
+    button("Buy a domain: Porkbun", () => callBackend("OpenHelp", "porkbun"), true),
+    button("Buy a domain: Cloudflare", () => callBackend("OpenHelp", "cloudflare-domains"), true),
+    button("Oracle free server", () => callBackend("OpenHelp", "oracle-free"), true));
   g.appendChild(help);
 
   const pre = document.createElement("pre");
