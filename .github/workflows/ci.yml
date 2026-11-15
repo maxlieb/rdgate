@@ -116,7 +116,7 @@ jobs:
         run: |
           # go.mod does not list Wails until tidy adds it, so this must stay.
           go mod tidy
-          wails build -tags wails -platform windows/amd64 -o rdgw-manager.exe
+          wails build -tags wails -platform windows/amd64 -o rdgate.exe
       - name: Build the installer
         run: |
           # Installing Inno Setup takes a while, so skip it when the runner already has it.
@@ -124,7 +124,7 @@ jobs:
             choco install innosetup -y --no-progress
           }
           New-Item -ItemType Directory -Force build | Out-Null
-          Copy-Item cmd\rdgw-manager\build\bin\rdgw-manager.exe build\
+          Copy-Item cmd\rdgw-manager\build\bin\rdgate.exe build\
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\rdgw-manager.iss
       - uses: actions/upload-artifact@v4
         with:

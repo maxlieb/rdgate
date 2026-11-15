@@ -1,4 +1,4 @@
-; Inno Setup script for RD Gateway Manager.
+; Inno Setup script for RDGate.
 ;
 ; Produces a normal Windows installer with an Add/Remove Programs entry whose
 ; uninstaller calls the app's own teardown first. Without that, uninstalling
@@ -6,12 +6,12 @@
 ; machine still published to the internet - the worst possible leftover.
 ;
 ; Build:  iscc installer\rdgw-manager.iss
-; Expects build\rdgw-manager.exe and build\rdgwctl.exe to exist.
+; Expects build\rdgate.exe and build\rdgwctl.exe to exist.
 
-#define AppName       "RD Gateway Manager"
-#define AppVersion    "0.1.35"
+#define AppName       "RDGate"
+#define AppVersion    "0.1.36"
 #define AppPublisher  "Max Lieberman"
-#define AppExe        "rdgw-manager.exe"
+#define AppExe        "rdgate.exe"
 #define CtlExe        "rdgwctl.exe"
 
 [Setup]
@@ -19,12 +19,13 @@ AppId={{8F3A1C62-5D47-4E2B-9A10-7C4E2F9B6D31}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-DefaultDirName={autopf}\RD Gateway Manager
+DefaultDirName={autopf}\RDGate
 DefaultGroupName={#AppName}
 UninstallDisplayName={#AppName}
 UninstallDisplayIcon={app}\{#AppExe}
 OutputDir=..\dist
-OutputBaseFilename=RDGatewayManager-Setup-{#AppVersion}
+OutputBaseFilename=RDGate-Setup-{#AppVersion}
+SetupIconFile=..\cmd\rdgw-manager\build\windows\icon.ico
 Compression=lzma2/fast
 SolidCompression=yes
 WizardStyle=modern
@@ -43,6 +44,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "startup"; Description: "Start {#AppName} when I sign in"; GroupDescription: "Startup"
+
+[InstallDelete]
+; Renamed from rdgw-manager.exe and the old Start menu folder, so an upgrade does not leave them behind.
+Type: files; Name: "{app}\rdgw-manager.exe"
+Type: filesandordirs; Name: "{autoprograms}\RD Gateway Manager"
 
 [Files]
 Source: "..\build\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion

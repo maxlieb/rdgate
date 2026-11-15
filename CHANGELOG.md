@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.36
+
+- Renamed to RDGate. The window, installer, Start menu entry and executable use the new name. Upgrading removes the old rdgw-manager.exe and the old Start menu folder. Existing install folders keep their location, and the scheduled task names stay as they were, so nothing on a running gateway changes.
+- New logo: a gate with a remote screen behind it. It appears in the window header, the taskbar and the installer.
+- Settings opens a settings panel showing the way in, the addresses, the sign-in account and the allowed computers. "Open install folder" is inside it.
+
 ## 0.1.35
 
 - Setup asks for the sign-in account's name and, optionally, its password. Leave the password empty and one is made and shown once, as before.

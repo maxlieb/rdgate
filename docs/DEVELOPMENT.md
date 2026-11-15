@@ -1,4 +1,4 @@
-# RD Gateway Manager
+# RDGate
 
 Stands up a self-hosted Remote Desktop Gateway on a Windows PC and publishes it
 over Tailscale Funnel, so a remote machine can connect with nothing installed on
@@ -97,7 +97,7 @@ Then the installer:
 
 ```
 mkdir build
-copy build\bin\rdgw-manager.exe build\
+copy build\bin\rdgate.exe build\
 go build -o build\rdgwctl.exe ./cmd/rdgwctl
 iscc installer\rdgw-manager.iss          # -> dist\RDGatewayManager-Setup-*.exe
 ```

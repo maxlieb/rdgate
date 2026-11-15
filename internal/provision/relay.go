@@ -65,7 +65,7 @@ func VPSScript(c Config) (string, error) {
 }
 
 const vpsHead = `#!/usr/bin/env bash
-# Relay setup for RD Gateway Manager.
+# Relay setup for RDGate.
 #
 # Makes this server the public face of your gateway: it holds the domain and
 # the certificate, and passes traffic to your PC over Tailscale. Safe to run
@@ -96,7 +96,7 @@ for i in 1 2 3 4 5 6; do
 done
 if [ -z "$reached" ]; then
   warn "Could not reach $UPSTREAM. Check that your PC is on, signed in to the same"
-  warn "Tailscale account, and that the RD Gateway Manager shows 'Web front end' as running."
+  warn "Tailscale account, and that the RDGate shows 'Web front end' as running."
   warn "Continuing anyway; the relay will start working as soon as the PC is reachable."
 fi
 
@@ -145,6 +145,6 @@ if [ -n "$myip" ] && [ "$myip" != "$dnsip" ]; then
   warn "$DOMAIN -> $myip at your DNS provider. Certificates cannot be issued until it does."
 fi
 echo
-echo "Done. In the RD Gateway Manager, press 'Test the relay'."
+echo "Done. In the RDGate, press 'Test the relay'."
 echo "Certificates can take a minute to appear the first time."
 `

@@ -88,7 +88,7 @@ func BuildTaskXML(description, command, arguments, workingDir string) (string, e
 	t.Version = "1.4"
 	t.Namespace = "http://schemas.microsoft.com/windows/2004/02/mit/task"
 	t.RegistrationInfo.Description = description
-	t.RegistrationInfo.Author = "RD Gateway Manager"
+	t.RegistrationInfo.Author = "RDGate"
 
 	t.Triggers.BootTrigger.Enabled = true
 	// Let the network stack and the Tailscale service settle before the

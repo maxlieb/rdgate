@@ -52,7 +52,7 @@ func main() {
 				runtime.EventsEmit(ctx, event, data)
 			}
 		},
-		Title: "RD Gateway",
+		Title: "RDGate",
 		// Sized for the signal path at its tallest, with two problems open.
 		Width:     760,
 		Height:    820,
