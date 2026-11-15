@@ -1527,13 +1527,15 @@ function escapeHTML(s) {
 let wizardPoll = null;
 let lastWizardKey = "";
 
-async function pollWizard() {
+// force is set by the person's own actions, which always redraw. The timer
+// passes false, so an unchanged state does not rebuild the screen.
+async function pollWizard(force = true) {
   // A redraw would drop focus while typing, and reset the cards during a measurement.
   const el = document.activeElement;
   const typing = el && el.closest && el.closest("#wizard") &&
     (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && !/^(radio|checkbox)$/.test(el.type)));
   if (typing || wiz.speedRunning) {
-    if (!wizardPoll) wizardPoll = setInterval(pollWizard, 3000);
+    if (!wizardPoll) wizardPoll = setInterval(() => pollWizard(false), 3000);
     return;
   }
   try {
@@ -1541,10 +1543,10 @@ async function pollWizard() {
     // Redraw only when the backend's state changed. An unchanged state used to
     // rebuild the whole screen every few seconds, which dropped focus and colours.
     const key = JSON.stringify(w);
-    if (key === lastWizardKey) return;
+    if (!force && key === lastWizardKey) return;
     lastWizardKey = key;
     renderWizard(w);
-    if (!wizardPoll) wizardPoll = setInterval(pollWizard, 3000);
+    if (!wizardPoll) wizardPoll = setInterval(() => pollWizard(false), 3000);
   } catch (err) {
     console.warn("wizard state unavailable", err);
   }
