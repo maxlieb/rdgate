@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.1.50
 
 - Installing over a running install stops the gateway tasks and programs first, then starts the tasks that were running. The copy no longer fails on rdgwctl.exe.
+- An interrupted setup is shown as unfinished on the next launch, not as an installation.
 
 ## 0.1.49
 

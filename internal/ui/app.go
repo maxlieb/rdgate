@@ -71,7 +71,7 @@ func New(configPath string) *App {
 func (a *App) Configured() bool {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
-	return a.cfg.PublicHost() != ""
+	return a.cfg.IsComplete()
 }
 
 // Status runs every check and returns the dashboard.
@@ -120,7 +120,7 @@ type WizardState struct {
 func (a *App) Wizard() WizardState {
 	a.mu.RLock()
 	root := a.cfg.InstallRoot
-	installed := a.cfg.PublicHost() != "" && a.cfg.ClientID != ""
+	installed := a.cfg.IsComplete()
 	a.mu.RUnlock()
 	if root == "" {
 		root = defaultInstallRoot()
@@ -316,6 +316,10 @@ func (a *App) RunInstall(opts InstallOptions) (*provision.Result, error) {
 		return nil, errors.New("unknown way of reaching the gateway: " + opts.Door)
 	}
 
+	// Saved as incomplete from the first write, so an interrupted setup is
+	// shown as unfinished, not as an installation.
+	notDone := false
+	cfg.Complete = &notDone
 	res, err := provision.Install(ctx, cfg, func(e provision.Event) {
 		a.emit("install:step", e)
 	})

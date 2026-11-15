@@ -319,6 +319,8 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 	}
 	report.step("Client configuration", StepDone, "RDGHelper.ini written")
 
+	done := true
+	c.Complete = &done
 	if err := Save(c); err != nil {
 		return nil, fmt.Errorf("saving configuration: %w", err)
 	}
