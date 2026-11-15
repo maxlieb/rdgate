@@ -59,6 +59,10 @@ Source: "..\build\rdpgw-templates\*"; DestDir: "{app}\rdpgw-templates"; Flags: i
 Source: "..\build\rdpgw-assets\*"; DestDir: "{app}\rdpgw-assets"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\build\git\*"; DestDir: "{app}\git"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\README.md";       DestDir: "{app}"; Flags: ignoreversion
+; Signing: the public certificate and the script that trusts it. Both are absent
+; from unsigned builds, in which case nothing is trusted and nothing fails.
+Source: "rdgate-signing.cer";     DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "trust-signing-cert.ps1"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 [Dirs]
 ; The config holds the OIDC client secret and the Gitea admin token, so the
@@ -84,6 +88,28 @@ Filename: "{app}\{#CtlExe}"; Parameters: "uninstall"; Flags: runhidden; RunOnceI
 [Code]
 var
   PurgePage: TInputOptionWizardPage;
+
+procedure RunTrustScript(Action: String);
+var
+  ResultCode: Integer;
+  Script, Cer: String;
+begin
+  Script := ExpandConstant('{app}\trust-signing-cert.ps1');
+  Cer := ExpandConstant('{app}\rdgate-signing.cer');
+  if FileExists(Script) and FileExists(Cer) then
+    Exec('powershell.exe',
+         '-NoProfile -ExecutionPolicy Bypass -File "' + Script + '" -Action ' + Action +
+         ' -CertPath "' + Cer + '"',
+         '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  { Trusting the publisher once means later updates, signed with the same key,
+    install without the publisher warning. }
+  if CurStep = ssPostInstall then
+    RunTrustScript('Install');
+end;
 
 procedure InitializeUninstallProgressForm();
 begin
@@ -120,6 +146,10 @@ var
   ResultCode: Integer;
   DataDir: String;
 begin
+  { Before the files go, so the script is still there to run. Removes only our own certificate. }
+  if CurUninstallStep = usUninstall then
+    RunTrustScript('Remove');
+
   if CurUninstallStep = usPostUninstall then
   begin
     DataDir := ExpandConstant('{commonappdata}\RDGateway');

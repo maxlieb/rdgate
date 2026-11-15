@@ -315,7 +315,7 @@ pre.script { margin: 10px 0 0; max-height: 150px; overflow: auto; padding: 10px 
 }
 .brand { display: inline-flex; align-items: center; gap: .5rem; }
 .brand svg { width: 1.6rem; height: 1.6rem; flex: none; }
-.choice-speed { display: block; margin-top: .4rem; font-size: .9rem; font-weight: 600; }
+.choice-speed { grid-column: 2; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--ink); }
 </style>
 </head>
 <body>
@@ -855,16 +855,16 @@ function choiceSpeedText(id) {
   const r = wiz.speed;
   if (!r) return "";
   if (id === "funnel") {
-    if (r.funnel && r.funnel.ok) return "Your Funnel address: " + r.funnel.ms + " ms";
-    if (r.reference && r.reference.ok) return "Tailscale's edge: " + r.reference.ms + " ms (stands in for Funnel)";
-    return "Tailscale's edge did not answer from here";
+    if (r.funnel && r.funnel.ok) return r.funnel.ms + " ms to your Funnel address";
+    if (r.reference && r.reference.ok) return r.reference.ms + " ms to Tailscale (stand-in)";
+    return "Tailscale did not answer from here";
   }
   if (id === "relay") {
     const fast = r.regions && r.regions.find(p => p.name === r.fastest);
-    return fast ? "Fastest server region from here: " + fast.city + ", " + fast.ms + " ms"
-                : "No Oracle Cloud region answered from here";
+    return fast ? "Fastest region: " + fast.city + ", " + fast.ms + " ms"
+                : "No Oracle region answered from here";
   }
-  return "Straight from the internet to this PC: nothing to measure from here";
+  return "No server to measure";
 }
 
 function paintChoiceSpeeds() {
