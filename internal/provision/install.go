@@ -122,9 +122,13 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 	}
 	report.step("Sign-in configuration", StepDone, "two-factor enrollment enforced")
 
-	password, err := NewPassword(20)
-	if err != nil {
-		return nil, err
+	password, generated := c.AdminPassword, false
+	if password == "" {
+		generatedPassword, err := NewPassword(20)
+		if err != nil {
+			return nil, err
+		}
+		password, generated = generatedPassword, true
 	}
 	report.step("Account", StepRunning, "creating "+c.AdminUser)
 	if _, err := EnsureGitBinary(winJoin(c.InstallRoot, "git")); err != nil {
@@ -319,9 +323,15 @@ func Install(ctx context.Context, c Config, report Reporter) (*Result, error) {
 		return nil, fmt.Errorf("saving configuration: %w", err)
 	}
 
+	shown := ""
+	if generated {
+		// Only a generated password is handed back. One the person chose is
+		// theirs already, and is not repeated in the result.
+		shown = password
+	}
 	return &Result{
 		Config:        c,
-		AdminPassword: password,
+		AdminPassword: shown,
 		TwoFactorURL:  c.TwoFactorURL(),
 		RelayScript:   relayScript,
 	}, nil

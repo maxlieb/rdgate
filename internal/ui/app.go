@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -208,6 +209,12 @@ type InstallOptions struct {
 	DuckName  string   `json:"duckName"`
 	DuckToken string   `json:"duckToken"`
 	DDNSURL   string   `json:"ddnsUrl"`
+
+	// AdminUser and AdminPassword are what the person chose on the account
+	// step. An empty name keeps the default; an empty password means one is
+	// made and shown once at the end.
+	AdminUser     string `json:"adminUser"`
+	AdminPassword string `json:"adminPassword"`
 }
 
 // CheckDirect answers "can this connection work without a server?" before the
@@ -241,6 +248,13 @@ func (a *App) RunInstall(opts InstallOptions) (*provision.Result, error) {
 	}
 	cfg.Targets = opts.Targets
 	cfg.ACMEEmail = opts.Email
+	if opts.AdminUser != "" {
+		cfg.AdminUser = opts.AdminUser
+	}
+	if err := provision.ValidateAccount(cfg.AdminUser, opts.AdminPassword); err != nil {
+		return nil, err
+	}
+	cfg.AdminPassword = opts.AdminPassword
 
 	switch opts.Door {
 	case "direct":
@@ -579,4 +593,30 @@ func (a *App) ChangeGatewayPassword() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	return provision.NewGitea(cfg).ChangePassword(ctx, cfg.AdminUser)
+}
+
+// MeasureLatency times this PC's Funnel address and the nearby Oracle Cloud
+// regions, so the person can see which region answers fastest from here.
+func (a *App) MeasureLatency() provision.LatencyReport {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	host := ""
+	if ts, err := provision.FindTailscale(); err == nil {
+		if st, err := ts.State(ctx); err == nil && st.Running {
+			host = st.Hostname
+		}
+	}
+	return provision.MeasureLatency(ctx, host)
+}
+
+// OpenUserAdmin opens Gitea's user administration on this PC. It uses the
+// loopback address on purpose: the admin pages are not put on the public one.
+func (a *App) OpenUserAdmin() error {
+	a.mu.RLock()
+	port := a.cfg.GiteaPort
+	a.mu.RUnlock()
+	if port == 0 {
+		port = provision.DefaultGiteaPort
+	}
+	return openURL("http://127.0.0.1:" + strconv.Itoa(port) + "/-/admin/users")
 }

@@ -407,3 +407,29 @@ func TestCaddyRoutesOAuthCodeStepsThroughGate(t *testing.T) {
 		t.Fatalf("gate must come before Gitea in the route:\n%s", out)
 	}
 }
+
+func TestValidateAccount(t *testing.T) {
+	ok := []struct{ name, pass string }{
+		{"rdgw", ""},
+		{"max.lieb", "longenough12"},
+		{"Lior_2", ""},
+	}
+	for _, c := range ok {
+		if err := ValidateAccount(c.name, c.pass); err != nil {
+			t.Errorf("%q/%q refused: %v", c.name, c.pass, err)
+		}
+	}
+	bad := []struct{ name, pass string }{
+		{"", ""},
+		{"-admin", ""},
+		{"has space", ""},
+		{"trailing.", ""},
+		{"rdgw", "short"},
+		{"ünïcode", ""},
+	}
+	for _, c := range bad {
+		if err := ValidateAccount(c.name, c.pass); err == nil {
+			t.Errorf("%q/%q accepted", c.name, c.pass)
+		}
+	}
+}

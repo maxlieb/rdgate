@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.35
+
+- Setup asks for the sign-in account's name and, optionally, its password. Leave the password empty and one is made and shown once, as before.
+- A speed check in setup times this PC's Funnel address and the nearby Oracle Cloud regions, and shows which region answers fastest from here. It changes nothing.
+- "Manage users" on the dashboard opens Gitea's user administration on this PC, on the loopback address, so the admin pages stay off the public address.
+
 ## 0.1.34
 
 - Sign-in requires two-factor. Caddy sends the two OAuth steps that issue a sign-in code through a small gate first. An account without two-factor turned on gets a page that says so, and no code. Accounts with two-factor, and anyone not yet signed in, go through as before.

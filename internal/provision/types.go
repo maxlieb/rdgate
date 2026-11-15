@@ -102,6 +102,10 @@ type Config struct {
 
 	AdminUser string `json:"adminUser"`
 
+	// AdminPassword is the password the person chose in the wizard. It is
+	// used once, during setup, and never written to config.json.
+	AdminPassword string `json:"-"`
+
 	RdpgwPort int `json:"rdpgwPort"`
 	GiteaPort int `json:"giteaPort"`
 

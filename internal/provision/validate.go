@@ -47,3 +47,18 @@ func validateIPv4(s string) (string, error) {
 	}
 	return ip.To4().String(), nil
 }
+
+var accountNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,38}$`)
+
+// ValidateAccount checks the sign-in account the person chose. The name rules
+// follow what Gitea accepts for usernames. A password is optional, but when it
+// is given it must be at least as long as a generated one.
+func ValidateAccount(name, password string) error {
+	if !accountNameRE.MatchString(name) || strings.HasSuffix(name, ".") {
+		return errors.New("\"" + name + "\" is not a usable account name: use letters, digits, '-', '_' or '.', and start with a letter or digit")
+	}
+	if password != "" && len(password) < 12 {
+		return errors.New("the password must be at least 12 characters, or left empty for one to be made")
+	}
+	return nil
+}
