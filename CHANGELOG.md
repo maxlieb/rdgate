@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.42
 
 - Signed releases: the installer trusts RDGate's self-signed certificate on first install, so later updates signed with it install without publisher warnings. Set up once with `installer\tools\new-signing-cert.ps1`.
 - Settings has a "Check for updates" button. An update is downloaded by RDGate itself, its signature is checked against the installed certificate, and it is installed while the gateway is briefly stopped.
