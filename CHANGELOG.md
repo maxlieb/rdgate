@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.45
+
+- The wizard redraws only when the state changed, so typing and the speed colours are not lost.
+- The speed colour is kept when the cards are rebuilt.
+
 ## 0.1.44
 
 - When the direct check does not confirm the way works, the wizard offers "Continue anyway" with a warning.
