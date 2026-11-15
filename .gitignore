@@ -5,6 +5,11 @@ RDGHelper.ini
 
 # Build output
 build/
+# The desktop app's icon sources are committed; Wails output in them is not.
+!cmd/rdgw-manager/build/
+cmd/rdgw-manager/build/bin/
+cmd/rdgw-manager/build/windows/info.json
+cmd/rdgw-manager/build/windows/wails.exe.manifest
 dist/
 *.exe
 *.zip
