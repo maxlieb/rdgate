@@ -785,7 +785,7 @@ function renderWizard(w) {
     host.dataset.backHook = "1";
     host.addEventListener("click", (e) => {
       const b = e.target.closest && e.target.closest("button");
-      if (b && !b.dataset.back) wiz.pinned = null;
+      if (b && b.dataset.next) wiz.pinned = null;
     }, true);
   }
 
@@ -839,6 +839,8 @@ function button(label, onClick, ghost) {
   const b = document.createElement("button");
   if (ghost) b.className = "ghost";
   b.textContent = label;
+  // Continue moves forward, so it is the only button that releases a Back position.
+  if (label === "Continue") b.dataset.next = "1";
   b.addEventListener("click", () => onClick(b));
   return b;
 }
@@ -890,8 +892,10 @@ function buildDoor(w) {
   if (wiz.speed) paintSpeed(speedBox, wiz.speed);
   else measure();
 
+  const again = button(wiz.speedRunning ? "Measuring…" : "Measure again", measure, true);
+  again.disabled = wiz.speedRunning;
   frag.appendChild(actions(
-    button("Measure again", measure, true),
+    again,
     button("Continue", () => { wiz.door = picked; renderWizard(w); })));
   return frag;
 }
@@ -1021,7 +1025,9 @@ function buildTailscale(w) {
   } else {
     // Tailscale is installed but this PC is not on a tailnet yet. The wizard
     // polls every few seconds, so this step moves on by itself once it is.
-    frag.appendChild(note("Tailscale is installed, but this PC is not connected to it yet. Open Tailscale from the taskbar, sign in to your account, and connect this PC to your tailnet. This page will continue on its own when it is connected."));
+    frag.appendChild(note(wiz.door === "relay"
+      ? "Tailscale is installed, but this PC is not connected to it yet. Your server joins the same private network, so this PC and the server can reach each other without opening a port on your router. Open Tailscale from the taskbar, sign in, and connect this PC. This page continues on its own once it is connected."
+      : "Tailscale is installed, but this PC is not connected to it yet. Open Tailscale from the taskbar, sign in to your account, and connect this PC to your tailnet. This page will continue on its own when it is connected."));
   }
   return frag;
 }
