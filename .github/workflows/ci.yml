@@ -117,23 +117,6 @@ jobs:
           # go.mod does not list Wails until tidy adds it, so this must stay.
           go mod tidy
           wails build -tags wails -platform windows/amd64 -o rdgate.exe
-      - name: Record the icon the app carries
-        # Diagnostic: prints what the built exe carries, to the log.
-        shell: pwsh
-        working-directory: cmd/rdgw-manager
-        run: |
-          Add-Type -AssemblyName System.Drawing
-          $ic = [System.Drawing.Icon]::ExtractAssociatedIcon("build\bin\rdgate.exe")
-          $ic.ToBitmap().Save("$PWD\icon-in-exe.png", [System.Drawing.Imaging.ImageFormat]::Png)
-          Write-Host "ICON-HASHES"
-          Get-FileHash build\bin\rdgate.exe, build\windows\icon.ico | Format-List | Out-String | Write-Host
-          Write-Host "ICON-BASE64-BEGIN"
-          Write-Host ([Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\icon-in-exe.png")))
-          Write-Host "ICON-BASE64-END"
-          Write-Host "BUILD-TREE"
-          Get-ChildItem build -Recurse | Select-Object FullName, Length | Format-Table -AutoSize | Out-String | Write-Host
-          Write-Host "SYSO"
-          Get-ChildItem -Recurse -Filter *.syso | Select-Object FullName, Length | Format-Table -AutoSize | Out-String | Write-Host
       - name: Build the installer
         run: |
           # Installing Inno Setup takes a while, so skip it when the runner already has it.

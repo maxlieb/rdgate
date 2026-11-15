@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.37
+
+- The app's icon is the RDGate logo. Before, `.gitignore` hid the icon files from git, so the build used Wails' default W.
+- The speed check is on the first setup screen, where the three ways in are chosen, so its results can inform that choice. It runs when the screen opens and has a "Measure again" button.
+
 ## 0.1.36
 
 - Renamed to RDGate. The window, installer, Start menu entry and executable use the new name. Upgrading removes the old rdgw-manager.exe and the old Start menu folder. Existing install folders keep their location, and the scheduled task names stay as they were, so nothing on a running gateway changes.
