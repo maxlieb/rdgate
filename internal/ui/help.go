@@ -5,8 +5,9 @@ import "errors"
 // helpLinks are the pages the wizard may open. The wizard names a page by key,
 // so the frontend cannot ask the PC to open an arbitrary address.
 var helpLinks = map[string]string{
-	"oracle-free":  "https://docs.oracle.com/en-us/iaas/Content/FreeTier/resourceref.htm",
-	"oracle-learn": "https://docs.oracle.com/en/learn/cloud_free_tier/index.html",
+	"oracle-free":        "https://docs.oracle.com/en-us/iaas/Content/FreeTier/resourceref.htm",
+	"porkbun":            "https://porkbun.com",
+	"cloudflare-domains": "https://www.cloudflare.com/products/registrar/",
 }
 
 // OpenHelp opens one of the known help pages in the browser.
