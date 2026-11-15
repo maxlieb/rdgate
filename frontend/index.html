@@ -948,6 +948,8 @@ function paintChoiceSpeeds() {
   });
   const m = document.querySelector('[data-measure="1"]');
   if (m) { m.disabled = wiz.speedRunning; m.textContent = wiz.speedRunning ? "Measuring…" : "Measure again"; }
+  const c = document.querySelector('[data-continue="1"]');
+  if (c) c.disabled = wiz.speedRunning;
 }
 
 function buildDoor(w) {
@@ -997,7 +999,9 @@ function buildDoor(w) {
 
   frag.appendChild(actions(
     (() => { const b = button("Measure again", measure, true); b.dataset.measure = "1"; b.disabled = wiz.speedRunning; return b; })(),
-    button("Continue", () => { wiz.door = picked(); wiz.pick = null; renderWizard(w); })));
+    (() => { const b = button("Continue", () => { wiz.door = picked(); wiz.pick = null; renderWizard(w); });
+      // Wait for the measurement, so the person sees the speeds before choosing.
+      b.dataset.continue = "1"; b.disabled = wiz.speedRunning; return b; })()));
   return frag;
 }
 
