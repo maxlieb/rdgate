@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.41
+
+- The speed check shows inside each option card: Funnel shows its own address or Tailscale's edge, the server option shows only the fastest Oracle region, and the direct option says there is nothing to measure from here.
+
 ## 0.1.40
 
 - The direct option checks for CGNAT. It compares the router's WAN address with the address the internet sees, and a private or 100.64.0.0/10 WAN address means the provider translates it again. Port forwarding cannot work behind that, so the app says so.

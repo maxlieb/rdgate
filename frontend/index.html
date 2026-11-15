@@ -315,6 +315,7 @@ pre.script { margin: 10px 0 0; max-height: 150px; overflow: auto; padding: 10px 
 }
 .brand { display: inline-flex; align-items: center; gap: .5rem; }
 .brand svg { width: 1.6rem; height: 1.6rem; flex: none; }
+.choice-speed { display: block; margin-top: .4rem; font-size: .9rem; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -848,6 +849,32 @@ function button(label, onClick, ghost) {
   return b;
 }
 
+// What the speed check says on each option card. Only the fastest Oracle
+// region is shown, not the whole list.
+function choiceSpeedText(id) {
+  const r = wiz.speed;
+  if (!r) return "";
+  if (id === "funnel") {
+    if (r.funnel && r.funnel.ok) return "Your Funnel address: " + r.funnel.ms + " ms";
+    if (r.reference && r.reference.ok) return "Tailscale's edge: " + r.reference.ms + " ms (stands in for Funnel)";
+    return "Tailscale's edge did not answer from here";
+  }
+  if (id === "relay") {
+    const fast = r.regions && r.regions.find(p => p.name === r.fastest);
+    return fast ? "Fastest server region from here: " + fast.city + ", " + fast.ms + " ms"
+                : "No Oracle Cloud region answered from here";
+  }
+  return "Straight from the internet to this PC: nothing to measure from here";
+}
+
+function paintChoiceSpeeds() {
+  document.querySelectorAll("[data-speed-for]").forEach(el => {
+    el.textContent = wiz.speedRunning && !wiz.speed ? "Measuring…" : choiceSpeedText(el.dataset.speedFor);
+  });
+  const m = document.querySelector('[data-measure="1"]');
+  if (m) { m.disabled = wiz.speedRunning; m.textContent = wiz.speedRunning ? "Measuring…" : "Measure again"; }
+}
+
 function buildDoor(w) {
   const frag = document.createDocumentFragment();
   frag.appendChild(note("Pick how people will reach your gateway from outside. " +
@@ -866,52 +893,32 @@ function buildDoor(w) {
     const t = document.createElement("span"); t.className = "choice-title"; t.textContent = d.title;
     const x = document.createElement("span"); x.className = "choice-text"; x.textContent = d.text;
     const c = document.createElement("span"); c.className = "choice-cost"; c.textContent = d.cost;
-    row.append(r, t, x, c);
+    const sp = document.createElement("span");
+    sp.className = "choice-speed";
+    sp.dataset.speedFor = d.id;
+    sp.textContent = choiceSpeedText(d.id);
+    row.append(r, t, x, c, sp);
     list.appendChild(row);
   });
   frag.appendChild(list);
 
-  // The speed check sits on this screen because it helps choose the way in.
-  // It runs once when the screen opens and keeps its result across redraws.
-  const speedBox = document.createElement("div");
-  speedBox.className = "checks";
-  speedBox.id = "speed-box";
-  frag.appendChild(speedBox);
-
-  const finishMeasure = () => {
-    const m = document.querySelector('[data-measure="1"]');
-    if (m) { m.disabled = false; m.textContent = "Measure again"; }
-  };
   const measure = async () => {
     if (wiz.speedRunning) return;
     wiz.speedRunning = true;
-    const box = document.getElementById("speed-box");
-    if (box) box.textContent = "Measuring from this PC. This takes a few seconds.";
+    paintChoiceSpeeds();
     try {
       wiz.speed = await callBackend("MeasureLatency");
     } catch (err) {
-      const b = document.getElementById("speed-box");
-      if (b) b.textContent = "Could not measure: " + String(err && err.message || err);
-      wiz.speedRunning = false;
-      finishMeasure();
-      return;
+      wiz.speed = null;
     }
     wiz.speedRunning = false;
-    const b = document.getElementById("speed-box");
-    if (b) paintSpeed(b, wiz.speed);
-    finishMeasure();
+    paintChoiceSpeeds();
   };
-  if (wiz.speed) paintSpeed(speedBox, wiz.speed);
-  else if (!wiz.speedRunning) measure();
+  // Measured once when the screen first opens; the result is kept across redraws.
+  if (!wiz.speed && !wiz.speedRunning) measure();
 
-  // Disabled until a measurement has finished, so it never sits there doing nothing.
-  const again = button(wiz.speedRunning ? "Measuring…" : "Measure again", measure, true);
-  again.dataset.measure = "1";
-  // Off only while a measurement runs. After a failure it is on again, so
-  // the person can retry.
-  again.disabled = wiz.speedRunning;
   frag.appendChild(actions(
-    again,
+    (() => { const b = button("Measure again", measure, true); b.dataset.measure = "1"; b.disabled = wiz.speedRunning; return b; })(),
     button("Continue", () => { wiz.door = picked(); wiz.pick = null; renderWizard(w); })));
   return frag;
 }
@@ -1195,7 +1202,6 @@ function buildAccount(w) {
   return frag;
 }
 
-// Shows what the speed check found. Used by the choice screen.
 function paintSpeed(out, r) {
   out.textContent = "";
   const line = (text, bold) => {
