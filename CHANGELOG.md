@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.48
 
 - "Set it up" shows progress at once and cannot be pressed twice.
 - The password warning appears only when a password was made for you.
