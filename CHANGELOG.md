@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- "Set it up" shows progress at once and cannot be pressed twice.
+- The password warning appears only when a password was made for you.
+- The Oracle step has buttons that open Oracle's Always Free and free tier pages.
+
 ## 0.1.47
 
 - Continue on the account step moves on again.
