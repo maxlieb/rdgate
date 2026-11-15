@@ -65,6 +65,12 @@ const (
 type Config struct {
 	InstallRoot string `json:"installRoot"`
 
+	// Complete is false while a setup is running or was interrupted, and true
+	// once it finished. Nil means the config predates this flag; those are
+	// judged by IsComplete. Saving a half-finished config must not make the
+	// app look installed on the next launch.
+	Complete *bool `json:"complete,omitempty"`
+
 	// FrontDoor decides how the outside world reaches this machine.
 	FrontDoor FrontDoor `json:"frontDoor"`
 
@@ -132,6 +138,15 @@ type Config struct {
 }
 
 // PublicHost is the name the remote client actually types.
+// IsComplete reports whether a setup finished. Configs from before the flag
+// existed count as complete when they have the sign-in client and an address.
+func (c Config) IsComplete() bool {
+	if c.Complete != nil {
+		return *c.Complete
+	}
+	return c.ClientID != "" && c.PublicHost() != ""
+}
+
 func (c Config) PublicHost() string {
 	if c.FrontDoor != FrontDoorFunnel && c.PublicDomain != "" {
 		return c.PublicDomain

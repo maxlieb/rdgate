@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- An interrupted setup is shown as unfinished on the next launch, not as an installation.
+
 ## 0.1.49
 
 - Simpler server steps in the relay guide, and buttons to buy a domain.
