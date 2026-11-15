@@ -58,7 +58,7 @@ Source: "..\build\rdpgw-LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\build\rdpgw-templates\*"; DestDir: "{app}\rdpgw-templates"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\build\rdpgw-assets\*"; DestDir: "{app}\rdpgw-assets"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\build\git\*"; DestDir: "{app}\git"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "..\README.md";       DestDir: "{app}"; Flags: ignoreversion isreadme
+Source: "..\README.md";       DestDir: "{app}"; Flags: ignoreversion
 
 [Dirs]
 ; The config holds the OIDC client secret and the Gitea admin token, so the
@@ -72,6 +72,8 @@ Name: "{group}\Uninstall {#AppName}";       Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}";           Filename: "{app}\{#AppExe}"; Tasks: startup
 
 [Run]
+; The README is offered on the last page, but not opened unless ticked.
+Filename: "{app}\README.md"; Description: "View the README"; Flags: postinstall shellexec skipifsilent unchecked
 Filename: "{app}\{#AppExe}"; Description: "Open {#AppName}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
