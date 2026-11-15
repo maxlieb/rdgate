@@ -785,7 +785,10 @@ function renderWizard(w) {
     host.dataset.backHook = "1";
     host.addEventListener("click", (e) => {
       const b = e.target.closest && e.target.closest("button");
-      if (b && b.dataset.next) wiz.pinned = null;
+      if (!b || b.dataset.back === "1") return;
+      // Checks, measurements and links keep the step being reviewed in place.
+      if (/^(Measure|Check|Open|Copy|Show)/.test(b.textContent)) return;
+      wiz.pinned = null;
     }, true);
   }
 
@@ -849,15 +852,17 @@ function buildDoor(w) {
   const frag = document.createDocumentFragment();
   frag.appendChild(note("Pick how people will reach your gateway from outside. " +
     "You can change your mind later by running setup again."));
+  // The choice lives in wiz, not in this closure: the wizard redraws every few
+  // seconds, and a redraw used to put the radio back on the saved door.
+  const picked = () => wiz.pick || wiz.door || "funnel";
   const list = document.createElement("div");
   list.className = "choices";
-  let picked = wiz.door || "funnel";
   DOORS.forEach(d => {
     const row = document.createElement("label");
     row.className = "choice";
     const r = document.createElement("input");
-    r.type = "radio"; r.name = "door"; r.checked = d.id === picked;
-    r.addEventListener("change", () => { picked = d.id; });
+    r.type = "radio"; r.name = "door"; r.checked = d.id === picked();
+    r.addEventListener("change", () => { wiz.pick = d.id; });
     const t = document.createElement("span"); t.className = "choice-title"; t.textContent = d.title;
     const x = document.createElement("span"); x.className = "choice-text"; x.textContent = d.text;
     const c = document.createElement("span"); c.className = "choice-cost"; c.textContent = d.cost;
@@ -872,6 +877,11 @@ function buildDoor(w) {
   speedBox.className = "checks";
   speedBox.id = "speed-box";
   frag.appendChild(speedBox);
+
+  const finishMeasure = () => {
+    const m = document.querySelector('[data-measure="1"]');
+    if (m) { m.disabled = false; m.textContent = "Measure again"; }
+  };
   const measure = async () => {
     if (wiz.speedRunning) return;
     wiz.speedRunning = true;
@@ -883,20 +893,26 @@ function buildDoor(w) {
       const b = document.getElementById("speed-box");
       if (b) b.textContent = "Could not measure: " + String(err && err.message || err);
       wiz.speedRunning = false;
+      finishMeasure();
       return;
     }
     wiz.speedRunning = false;
     const b = document.getElementById("speed-box");
     if (b) paintSpeed(b, wiz.speed);
+    finishMeasure();
   };
   if (wiz.speed) paintSpeed(speedBox, wiz.speed);
-  else measure();
+  else if (!wiz.speedRunning) measure();
 
+  // Disabled until a measurement has finished, so it never sits there doing nothing.
   const again = button(wiz.speedRunning ? "Measuring…" : "Measure again", measure, true);
+  again.dataset.measure = "1";
+  // Off only while a measurement runs. After a failure it is on again, so
+  // the person can retry.
   again.disabled = wiz.speedRunning;
   frag.appendChild(actions(
     again,
-    button("Continue", () => { wiz.door = picked; renderWizard(w); })));
+    button("Continue", () => { wiz.door = picked(); wiz.pick = null; renderWizard(w); })));
   return frag;
 }
 

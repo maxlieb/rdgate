@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.39
+
+- Choosing a way in sticks. The choice screen redraws every few seconds, and each redraw used to put the selection back on Funnel.
+- Back works on every step after the first. Continuing from an earlier step moves on from there. Checks, measurements and links keep the step open.
+- "Measure again" is off while a measurement runs, and on once it has finished or failed.
+
 ## 0.1.38
 
 - The speed check measures Tailscale's public edge as a stand-in for Funnel, so there is a reading before your own Funnel address exists. Your own address is still measured once it is published, and the row says so when it is not.
