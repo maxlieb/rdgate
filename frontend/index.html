@@ -1360,7 +1360,9 @@ function buildTargets(w) {
   add.append(input, addBtn);
   frag.appendChild(add);
 
-  frag.appendChild(actions(button("Set it up", () => startInstall(w))));
+  const setup = button(wiz.installing ? "Setting up…" : "Set it up", () => startInstall(w));
+  setup.disabled = !!wiz.installing;
+  frag.appendChild(actions(setup));
 
   if (wiz.progress.length) frag.appendChild(progressList());
   return frag;
@@ -1392,7 +1394,8 @@ function progressList() {
 async function startInstall(w) {
   if (wiz.installing) return;
   wiz.installing = true;
-  wiz.progress = [];
+  wiz.progress = [{ step: "Starting", state: "running", message: "Preparing this PC" }];
+  renderWizard(w);
 
   try {
     const f = wiz.form;
@@ -1441,10 +1444,12 @@ function buildFinish(w) {
     dl.append(dt, dd);
   }
   box.appendChild(dl);
-  const warn = document.createElement("p");
-  warn.className = "warn";
-  warn.textContent = "Write the password down now. It is shown once and not stored.";
-  box.appendChild(warn);
+  if (r.adminPassword) {
+    const warn = document.createElement("p");
+    warn.className = "warn";
+    warn.textContent = "Write the password down now. It is shown once and not stored.";
+    box.appendChild(warn);
+  }
   frag.appendChild(box);
 
   if (wiz.door === "relay") frag.appendChild(relayGuide(r));
@@ -1487,6 +1492,12 @@ function relayGuide(r) {
     "<b>Test it.</b> Press the button below. A green result means the whole path works.",
   ].forEach(h => { const li = document.createElement("li"); li.innerHTML = h; ol.appendChild(li); });
   g.appendChild(ol);
+  const help = document.createElement("div");
+  help.className = "actions";
+  help.append(
+    button("Oracle: Always Free resources", () => callBackend("OpenHelp", "oracle-free"), true),
+    button("Oracle: cloud free tier guide", () => callBackend("OpenHelp", "oracle-learn"), true));
+  g.appendChild(help);
 
   const pre = document.createElement("pre");
   pre.className = "script";
