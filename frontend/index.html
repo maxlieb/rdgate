@@ -723,7 +723,7 @@ const wiz = {
   form: { domain: "", email: "", ddns: "duck", duckName: "", duckToken: "", ddnsUrl: "",
           accountName: "rdgw", accountPass: "", accountPass2: "" },
   directCheck: null, directAck: false, addressOk: false, funnelOk: false, funnelLast: null, funnelAt: 0,
-  accountOk: false, account: null, speedOk: false,
+  accountOk: false, account: null, speed: null, speedRunning: false,
   targets: [], installing: false, result: null, progress: [],
 };
 
@@ -764,7 +764,6 @@ function wizardSteps(w) {
       done: () => wiz.addressOk, build: () => buildAddress(w) });
   }
   steps.push({ title: "Choose the sign-in account", done: () => wiz.accountOk, build: () => buildAccount(w) });
-  steps.push({ title: "Check the speed from here", done: () => wiz.speedOk, build: () => buildSpeed(w) });
   steps.push({ title: "Add the gateway program", done: () => w.rdpgwPresent, build: () => buildRdpgw(w) });
   steps.push({ title: "Choose what to reach", done: () => !!wiz.result, build: () => buildTargets(w) });
   steps.push({ title: door === "relay" ? "Set up the server" : "Finish setting up",
@@ -848,7 +847,36 @@ function buildDoor(w) {
     list.appendChild(row);
   });
   frag.appendChild(list);
-  frag.appendChild(actions(button("Continue", () => { wiz.door = picked; renderWizard(w); })));
+
+  // The speed check sits on this screen because it helps choose the way in.
+  // It runs once when the screen opens and keeps its result across redraws.
+  const speedBox = document.createElement("div");
+  speedBox.className = "checks";
+  speedBox.id = "speed-box";
+  frag.appendChild(speedBox);
+  const measure = async () => {
+    if (wiz.speedRunning) return;
+    wiz.speedRunning = true;
+    const box = document.getElementById("speed-box");
+    if (box) box.textContent = "Measuring from this PC. This takes a few seconds.";
+    try {
+      wiz.speed = await callBackend("MeasureLatency");
+    } catch (err) {
+      const b = document.getElementById("speed-box");
+      if (b) b.textContent = "Could not measure: " + String(err && err.message || err);
+      wiz.speedRunning = false;
+      return;
+    }
+    wiz.speedRunning = false;
+    const b = document.getElementById("speed-box");
+    if (b) paintSpeed(b, wiz.speed);
+  };
+  if (wiz.speed) paintSpeed(speedBox, wiz.speed);
+  else measure();
+
+  frag.appendChild(actions(
+    button("Measure again", measure, true),
+    button("Continue", () => { wiz.door = picked; renderWizard(w); })));
   return frag;
 }
 
@@ -1114,54 +1142,33 @@ function buildAccount(w) {
   return frag;
 }
 
-// The speed check times this PC's Funnel address and the nearby Oracle Cloud
-// regions. It changes nothing; it only shows which region answers fastest here.
-function buildSpeed(w) {
-  const frag = document.createDocumentFragment();
-  frag.appendChild(note("This measures how quickly a few places answer from this PC. " +
-    "It changes nothing. Results depend on this PC's connection, so they are a guide, not a promise."));
-  const out = document.createElement("div");
-  out.className = "checks";
-  frag.appendChild(out);
-
-  const renderSpeed = (r) => {
-    out.textContent = "";
-    if (r.funnel) {
-      const d = document.createElement("div");
-      d.className = "check-row";
-      const t = document.createElement("strong");
-      t.textContent = r.funnel.ok ? "Your Funnel address: " + r.funnel.ms + " ms" : "Your Funnel address did not answer";
-      d.appendChild(t);
-      out.appendChild(d);
-    }
-    const table = document.createElement("div");
-    table.className = "check-row";
-    for (const p of r.regions) {
-      const row = document.createElement("p");
-      row.className = "step-note";
-      const isFastest = r.fastest && p.name === r.fastest;
-      row.textContent = (isFastest ? "★ " : "") + p.name + " (" + p.city + "): " +
-        (p.ok ? p.ms + " ms" : "no reply");
-      if (isFastest) row.style.fontWeight = "600";
-      table.appendChild(row);
-    }
-    out.appendChild(table);
-    if (r.fastest) {
-      const fast = r.regions.find(p => p.name === r.fastest);
-      out.appendChild(note("Fastest from here: " + fast.city + " (" + fast.ms + " ms)."));
-    }
-  };
-
-  const measure = button("Measure", async () => {
-    out.textContent = "Measuring. This can take up to a minute.";
-    try {
-      renderSpeed(await callBackend("MeasureLatency"));
-    } catch (err) {
-      out.textContent = "Could not measure: " + String(err && err.message || err);
-    }
-  }, true);
-  frag.appendChild(actions(measure, button("Continue", () => { wiz.speedOk = true; pollWizard(); })));
-  return frag;
+// Shows what the speed check found. Used by the choice screen.
+function paintSpeed(out, r) {
+  out.textContent = "";
+  if (r.funnel) {
+    const d = document.createElement("div");
+    d.className = "check-row";
+    const t = document.createElement("strong");
+    t.textContent = r.funnel.ok ? "Your Funnel address: " + r.funnel.ms + " ms" : "Your Funnel address did not answer";
+    d.appendChild(t);
+    out.appendChild(d);
+  }
+  const table = document.createElement("div");
+  table.className = "check-row";
+  for (const p of r.regions) {
+    const row = document.createElement("p");
+    row.className = "step-note";
+    const isFastest = r.fastest && p.name === r.fastest;
+    row.textContent = (isFastest ? "★ " : "") + p.name + " (" + p.city + "): " + (p.ok ? p.ms + " ms" : "no reply");
+    if (isFastest) row.style.fontWeight = "600";
+    table.appendChild(row);
+  }
+  out.appendChild(table);
+  if (r.fastest) {
+    const fast = r.regions.find(p => p.name === r.fastest);
+    out.appendChild(note("Fastest from here: " + fast.city + " (" + fast.ms + " ms). " +
+      "A server in that region answers quickest for you. The Funnel row shows up once Tailscale is connected."));
+  }
 }
 
 function buildRdpgw(w) {
