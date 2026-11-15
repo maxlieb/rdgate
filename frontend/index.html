@@ -787,7 +787,7 @@ const DOORS = [
   { id: "relay", title: "Through a small server of your own",
     text: "A tiny free server holds your domain name and passes traffic to this PC. Works on any " +
           "connection, opens nothing on your router, and the address looks like any ordinary website.",
-    cost: "Oracle server: free. Domain: about $10 to $15 a year, depending on the ending. About 20 minutes, once." },
+    cost: "Costs a few dollars a year. About 20 minutes, once." },
 ];
 
 // The path through the wizard depends on the way chosen. Each step says for
@@ -948,6 +948,8 @@ function paintChoiceSpeeds() {
   });
   const m = document.querySelector('[data-measure="1"]');
   if (m) { m.disabled = wiz.speedRunning; m.textContent = wiz.speedRunning ? "Measuring…" : "Measure again"; }
+  const c = document.querySelector('[data-continue="1"]');
+  if (c) c.disabled = wiz.speedRunning;
 }
 
 function buildDoor(w) {
@@ -997,7 +999,9 @@ function buildDoor(w) {
 
   frag.appendChild(actions(
     (() => { const b = button("Measure again", measure, true); b.dataset.measure = "1"; b.disabled = wiz.speedRunning; return b; })(),
-    button("Continue", () => { wiz.door = picked(); wiz.pick = null; renderWizard(w); })));
+    (() => { const b = button("Continue", () => { wiz.door = picked(); wiz.pick = null; renderWizard(w); });
+      // Wait for the measurement, so the person sees the speeds before choosing.
+      b.dataset.continue = "1"; b.disabled = wiz.speedRunning; return b; })()));
   return frag;
 }
 
