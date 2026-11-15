@@ -724,6 +724,7 @@ const wiz = {
           accountName: "rdgw", accountPass: "", accountPass2: "" },
   directCheck: null, directAck: false, addressOk: false, funnelOk: false, funnelLast: null, funnelAt: 0,
   accountOk: false, account: null, speed: null, speedRunning: false,
+  pinned: null,               // a step the person went Back to; null means the first unfinished one
   targets: [], installing: false, result: null, progress: [],
 };
 
@@ -775,8 +776,18 @@ function renderWizard(w) {
   const steps = wizardSteps(w);
   let cur = steps.findIndex(s => !s.done());
   if (cur < 0) cur = steps.length - 1;
+  // Going Back shows an earlier step without undoing anything: its answers are
+  // kept, and pressing any button in it moves on again.
+  if (wiz.pinned != null && wiz.pinned < cur) cur = Math.max(0, wiz.pinned);
   const host = document.getElementById("steps");
   host.textContent = "";
+  if (!host.dataset.backHook) {
+    host.dataset.backHook = "1";
+    host.addEventListener("click", (e) => {
+      const b = e.target.closest && e.target.closest("button");
+      if (b && !b.dataset.back) wiz.pinned = null;
+    }, true);
+  }
 
   steps.forEach((s, i) => {
     const li = document.createElement("li");
@@ -798,6 +809,11 @@ function renderWizard(w) {
     if (i === cur) {
       const detail = s.build();
       if (detail) body.appendChild(detail);
+      if (i > 0) {
+        const back = button("Back", () => { wiz.pinned = cur - 1; renderWizard(w); }, true);
+        back.dataset.back = "1";
+        body.appendChild(actions(back));
+      }
     }
 
     li.append(num, body);
