@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.38
+
+- The speed check measures Tailscale's public edge as a stand-in for Funnel, so there is a reading before your own Funnel address exists. Your own address is still measured once it is published, and the row says so when it is not.
+
 ## 0.1.37
 
 - The app's icon is the RDGate logo. Before, `.gitignore` hid the icon files from git, so the build used Wails' default W.

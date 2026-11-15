@@ -1145,13 +1145,24 @@ function buildAccount(w) {
 // Shows what the speed check found. Used by the choice screen.
 function paintSpeed(out, r) {
   out.textContent = "";
-  if (r.funnel) {
+  const line = (text, bold) => {
     const d = document.createElement("div");
     d.className = "check-row";
     const t = document.createElement("strong");
-    t.textContent = r.funnel.ok ? "Your Funnel address: " + r.funnel.ms + " ms" : "Your Funnel address did not answer";
+    t.textContent = text;
+    if (!bold) t.style.fontWeight = "400";
     d.appendChild(t);
     out.appendChild(d);
+  };
+  if (r.reference) {
+    line(r.reference.ok
+      ? "Tailscale's public edge (stands in for Funnel until yours exists): " + r.reference.ms + " ms"
+      : "Tailscale's public edge did not answer from here", true);
+  }
+  if (r.funnel) {
+    line(r.funnel.ok
+      ? "Your Funnel address: " + r.funnel.ms + " ms"
+      : "Your Funnel address is not published yet", true);
   }
   const table = document.createElement("div");
   table.className = "check-row";

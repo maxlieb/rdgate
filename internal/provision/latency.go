@@ -23,11 +23,19 @@ type Probe struct {
 // LatencyReport is what the speed check shows: this PC's Funnel address, and
 // every Oracle Cloud region from the list, fastest first.
 type LatencyReport struct {
-	Funnel  *Probe  `json:"funnel,omitempty"`
-	Regions []Probe `json:"regions"`
+	// Funnel is this PC's own Funnel address, when one is published.
+	Funnel *Probe `json:"funnel,omitempty"`
+	// Reference is a public Tailscale endpoint, measured on every run. It
+	// stands in for a Funnel address before one exists: Funnel traffic also
+	// enters Tailscale's own infrastructure.
+	Reference *Probe  `json:"reference,omitempty"`
+	Regions   []Probe `json:"regions"`
 	// Fastest is the Oracle region that answered first, if any did.
 	Fastest string `json:"fastest,omitempty"`
 }
+
+// ReferenceURL is the stand-in for a Funnel address when none is published.
+const ReferenceURL = "https://login.tailscale.com/"
 
 // oracleRegions are the Oracle Cloud regions near Israel plus two far ones for
 // comparison. The object storage endpoint exists in every region, so it is a
@@ -154,6 +162,8 @@ func MeasureLatency(ctx context.Context, funnelHost string) LatencyReport {
 	var rep LatencyReport
 	done := make(chan []Probe, 1)
 	go func() { done <- measureAll(ctx, targets) }()
+	ref := measureAll(ctx, []target{{"Tailscale edge", "reference for Funnel", ReferenceURL}})[0]
+	rep.Reference = &ref
 	if funnelTarget != nil {
 		p := measureAll(ctx, []target{*funnelTarget})[0]
 		rep.Funnel = &p
