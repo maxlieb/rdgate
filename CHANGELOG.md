@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.46
+
+- Continue on the first step is disabled until the speed measurement finishes.
+- The Oracle option says the cost is a few dollars a year.
+
 ## 0.1.45
 
 - The wizard redraws only when the state changed, so typing and the speed colours are not lost.
