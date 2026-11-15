@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.1.49
 
+- Simpler server steps in the relay guide, and buttons to buy a domain.
+- Shortcuts take their icon from rdgate.exe explicitly.
 - Shortcuts use the RDGate icon from the program file.
 
 ## 0.1.48
