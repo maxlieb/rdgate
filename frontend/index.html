@@ -1485,6 +1485,8 @@ function escapeHTML(s) {
 }
 
 let wizardPoll = null;
+let lastWizardKey = "";
+
 async function pollWizard() {
   // A redraw would drop focus while typing, and reset the cards during a measurement.
   const el = document.activeElement;
@@ -1496,6 +1498,11 @@ async function pollWizard() {
   }
   try {
     const w = await callBackend("Wizard");
+    // Redraw only when the backend's state changed. An unchanged state used to
+    // rebuild the whole screen every few seconds, which dropped focus and colours.
+    const key = JSON.stringify(w);
+    if (key === lastWizardKey) return;
+    lastWizardKey = key;
     renderWizard(w);
     if (!wizardPoll) wizardPoll = setInterval(pollWizard, 3000);
   } catch (err) {
