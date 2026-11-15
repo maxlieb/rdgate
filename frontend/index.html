@@ -315,6 +315,7 @@ pre.script { margin: 10px 0 0; max-height: 150px; overflow: auto; padding: 10px 
 }
 .brand { display: inline-flex; align-items: center; gap: .5rem; }
 .brand svg { width: 1.6rem; height: 1.6rem; flex: none; }
+.choice-select { width: 100%; font: inherit; padding: 6px 8px; color: var(--ink); background: var(--paper-rise); border: 1px solid var(--rule); border-radius: var(--radius); }
 .choice-speed { grid-column: 2; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--ink); }
 .choice-speed.fast { color: var(--live); }
 .choice-speed.slow { color: var(--waiting); }
@@ -766,7 +767,7 @@ document.getElementById("copy-address").addEventListener("click", async (e) => {
 
 const wiz = {
   door: null,                 // chosen on the first screen
-  form: { domain: "", email: "", ddns: "duck", duckName: "", duckToken: "", ddnsUrl: "",
+  form: { domain: "", email: "", ddns: "duck", duckName: "", duckToken: "", ddnsUrl: "", noipHost: "", noipUser: "", noipPass: "",
           accountName: "rdgw", accountPass: "", accountPass2: "" },
   directCheck: null, directAck: false, addressOk: false, funnelOk: false, funnelLast: null, funnelAt: 0,
   accountOk: false, account: null, speed: null, speedRunning: false,
@@ -1072,37 +1073,63 @@ function buildAddress(w) {
       field("Email for certificate notices (optional)", "email", { placeholder: "you@example.com" }));
   } else {
     frag.appendChild(note("Your home address changes now and then, so a name service keeps a " +
-      "fixed name pointing at it. DuckDNS is free; sign in at duckdns.org, create a name, and copy the token shown at the top."));
-    const duck = field("DuckDNS name", "duckName", { placeholder: "myhome", help: "Just the part before .duckdns.org" });
-    const tok = field("DuckDNS token", "duckToken", { secret: true });
-    const own = document.createElement("details");
-    own.className = "guide";
-    const sm = document.createElement("summary"); sm.textContent = "I have my own domain or another provider";
-    own.appendChild(sm);
-    const f2 = document.createElement("div"); f2.className = "fields";
-    f2.append(
-      field("Your address", "domain", { placeholder: "rdgw.example.com" }),
-      field("Update link from your provider (optional)", "ddnsUrl",
-        { secret: true, help: "Starts with https://. Leave empty if your address never changes." }));
-    own.appendChild(f2);
-    fields.append(duck, tok, own,
-      field("Email for certificate notices (optional)", "email", { placeholder: "you@example.com" }));
-    frag.appendChild(note("DuckDNS names are widely recognised by company web filters. " +
+      "fixed name pointing at it. Pick the service you use, or your own domain."));
+    const pick = document.createElement("select");
+    pick.className = "choice-select";
+    [["duck", "DuckDNS (free, name.duckdns.org)"],
+     ["noip", "No-IP (free plan, name.ddns.net)"],
+     ["own", "My own domain"]].forEach(([v, label]) => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = label; o.selected = (wiz.form.ddns || "duck") === v;
+      pick.appendChild(o);
+    });
+    pick.addEventListener("change", () => { wiz.form.ddns = pick.value; renderWizard(w); });
+    const pickWrap = document.createElement("label");
+    pickWrap.className = "field";
+    const pickLabel = document.createElement("span"); pickLabel.textContent = "Name service";
+    pickWrap.append(pickLabel, pick);
+    fields.appendChild(pickWrap);
+
+    const ddns = wiz.form.ddns || "duck";
+    if (ddns === "duck") {
+      fields.append(
+        field("DuckDNS name", "duckName", { placeholder: "myhome", help: "Just the part before .duckdns.org" }),
+        field("DuckDNS token", "duckToken", { secret: true }));
+    } else if (ddns === "noip") {
+      fields.append(
+        field("No-IP name", "noipHost", { placeholder: "myhome.ddns.net", help: "The full name, as shown in your No-IP account" }),
+        field("No-IP username", "noipUser", {}),
+        field("No-IP password", "noipPass", { secret: true }));
+    } else {
+      fields.append(
+        field("Your address", "domain", { placeholder: "rdgw.example.com",
+          help: "The name people type. It can be a CNAME to a name from any service." }),
+        field("Update link of the service your domain points to (optional)", "ddnsUrl",
+          { secret: true, help: "Starts with https://. Leave empty if your address never changes." }));
+    }
+    fields.append(field("Email for certificate notices (optional)", "email", { placeholder: "you@example.com" }));
+    frag.appendChild(note("Free names from DuckDNS and No-IP are widely recognised by company web filters. " +
       "If this PC's network is filtered, your own domain is the safer choice."));
   }
   frag.append(fields, err);
 
   frag.appendChild(actions(button("Continue", () => {
     const f = wiz.form;
-    const usingDuck = wiz.door === "direct" && f.duckName && !f.domain;
+    const ddns = f.ddns || "duck";
+    const fail = (m) => { err.textContent = m; err.hidden = false; };
     if (wiz.door === "relay" && !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(f.domain)) {
-      err.textContent = "Enter a full domain name, like rdgw.example.com."; err.hidden = false; return;
+      return fail("Enter a full domain name, like rdgw.example.com.");
     }
-    if (wiz.door === "direct" && !usingDuck && !f.domain) {
-      err.textContent = "Enter a DuckDNS name, or your own address."; err.hidden = false; return;
-    }
-    if (usingDuck && !f.duckToken) {
-      err.textContent = "Paste the DuckDNS token as well."; err.hidden = false; return;
+    if (wiz.door === "direct") {
+      if (ddns === "duck") {
+        if (!f.duckName) return fail("Enter your DuckDNS name.");
+        if (!f.duckToken) return fail("Paste the DuckDNS token as well.");
+      } else if (ddns === "noip") {
+        if (!f.noipHost) return fail("Enter your No-IP name, such as myhome.ddns.net.");
+        if (!f.noipUser || !f.noipPass) return fail("Enter the No-IP username and password.");
+      } else if (!f.domain) {
+        return fail("Enter your own address.");
+      }
     }
     wiz.addressOk = true; renderWizard(w);
   })));
@@ -1369,8 +1396,12 @@ async function startInstall(w) {
       door: wiz.door,
       targets: wiz.targets.filter(t => t.on).map(t => t.addr),
       domain: f.domain, email: f.email,
-      duckName: wiz.door === "direct" ? f.duckName : "",
-      duckToken: f.duckToken, ddnsUrl: f.ddnsUrl,
+      duckName: wiz.door === "direct" && (f.ddns || "duck") === "duck" ? f.duckName : "",
+      duckToken: wiz.door === "direct" && (f.ddns || "duck") === "duck" ? f.duckToken : "",
+      noipHost: wiz.door === "direct" && f.ddns === "noip" ? f.noipHost : "",
+      noipUser: wiz.door === "direct" && f.ddns === "noip" ? f.noipUser : "",
+      noipPass: wiz.door === "direct" && f.ddns === "noip" ? f.noipPass : "",
+      ddnsUrl: wiz.door === "direct" && f.ddns === "own" ? f.ddnsUrl : "",
       adminUser: wiz.account ? wiz.account.name : "",
       adminPassword: wiz.account ? wiz.account.pass : "",
     });
