@@ -9,7 +9,7 @@
 ; Expects build\rdgate.exe and build\rdgwctl.exe to exist.
 
 #define AppName       "RDGate"
-#define AppVersion    "0.1.43"
+#define AppVersion    "0.1.44"
 #define AppPublisher  "Max Lieberman"
 #define AppExe        "rdgate.exe"
 #define CtlExe        "rdgwctl.exe"

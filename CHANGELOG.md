@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.44
 
+- When the direct check does not confirm the way works, the wizard offers "Continue anyway" with a warning.
 - Each network option shows its speed in green when it is the faster of the two, and in ochre when it is slower.
 - "Straight to this PC" says it is usually fastest but less secure than the other two options.
 - The Oracle option gives the domain cost in dollars.

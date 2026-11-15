@@ -1015,7 +1015,11 @@ function buildDirectCheck(w) {
     if (c.public) {
       out.appendChild(actions(button("Continue", () => { wiz.directAck = true; renderWizard(w); })));
     } else {
-      out.appendChild(actions(button("Choose another way", () => { wiz.door = null; wiz.directCheck = null; renderWizard(w); })));
+      out.appendChild(note("The check did not confirm that this way works. Continue anyway only if you know " +
+        "your connection allows it, for example after you have opened the port on your router yourself."));
+      out.appendChild(actions(
+        button("Choose another way", () => { wiz.door = null; wiz.directCheck = null; renderWizard(w); }),
+        button("Continue anyway", () => { wiz.directAck = true; renderWizard(w); }, true)));
     }
   };
 
