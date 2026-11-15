@@ -108,12 +108,70 @@ begin
          '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 
-procedure CurStepChanged(CurStep: TSetupStep);
+const
+  RDGateTasks = 'RDGateway-Gateway,RDGateway-SignIn,RDGateway-Web,RDGateway-Gate,RDGateway-Address';
+
+{ Upgrading over a running install: the scheduled tasks keep rdgwctl.exe and
+  rdpgw.exe open, so the copy fails. Remember which tasks were running, stop
+  them and the programs, install, then start those tasks again. }
+procedure StopRunningParts(Marker: String);
+var
+  Names: TStringList;
+  I: Integer;
+  ResultCode: Integer;
+  Name: String;
 begin
-  { Trusting the publisher once means later updates, signed with the same key,
-    install without the publisher warning. }
+  DeleteFile(Marker);
+  Names := TStringList.Create;
+  try
+    Names.CommaText := RDGateTasks;
+    for I := 0 to Names.Count - 1 do
+    begin
+      Name := Names[I];
+      Exec('cmd.exe', '/c schtasks /Query /TN "' + Name + '" /FO CSV /NH | findstr /I "Running" >nul && echo ' + Name + '>> "' + Marker + '"',
+           '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+      Exec('schtasks.exe', '/End /TN "' + Name + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    end;
+  finally
+    Names.Free;
+  end;
+  Exec('taskkill.exe', '/F /T /IM rdgwctl.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill.exe', '/F /T /IM rdpgw.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill.exe', '/F /T /IM rdgate.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+procedure StartStoppedParts(Marker: String);
+var
+  Lines: TArrayOfString;
+  I: Integer;
+  ResultCode: Integer;
+  Name: String;
+begin
+  if not FileExists(Marker) then Exit;
+  if LoadStringsFromFile(Marker, Lines) then
+    for I := 0 to GetArrayLength(Lines) - 1 do
+    begin
+      Name := Trim(Lines[I]);
+      if Name <> '' then
+        Exec('schtasks.exe', '/Run /TN "' + Name + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    end;
+  DeleteFile(Marker);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Marker: String;
+begin
+  Marker := ExpandConstant('{tmp}\rdgate-running-tasks.txt');
+  if CurStep = ssInstall then
+    StopRunningParts(Marker);
   if CurStep = ssPostInstall then
+  begin
+    { Trusting the publisher once means later updates, signed with the same key,
+      install without the publisher warning. }
     RunTrustScript('Install');
+    StartStoppedParts(Marker);
+  end;
 end;
 
 procedure InitializeUninstallProgressForm();
