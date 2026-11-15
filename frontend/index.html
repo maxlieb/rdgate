@@ -1070,7 +1070,10 @@ function buildAddress(w) {
 
   if (wiz.door === "relay") {
     frag.appendChild(note("This is the address people will type. Buy a domain name, or use a subdomain " +
-      "of one you already own, such as <code>rdgw.yourdomain.com</code>. The next step can help you buy one."));
+      "of one you already own, such as <code>rdgw.yourdomain.com</code>."));
+    frag.appendChild(actions(
+      button("Buy a domain: Porkbun", () => callBackend("OpenHelp", "porkbun"), true),
+      button("Buy a domain: Cloudflare", () => callBackend("OpenHelp", "cloudflare-domains"), true)));
     fields.append(
       field("Domain name", "domain", { placeholder: "rdgw.example.com" }),
       field("Email for certificate notices (optional)", "email", { placeholder: "you@example.com" }));
