@@ -378,10 +378,10 @@ func (a *App) OpenTwoFactor() error {
 	return openURL(url)
 }
 
-// OpenSettings opens the install folder, where config.json and the gateway
-// log live. It is what the dashboard's Settings button has always been meant
-// to reach, and it was missing from the Go side.
-func (a *App) OpenSettings() error {
+// OpenInstallFolder opens the install folder, where config.json, the Gitea and
+// rdpgw configs, the Caddyfile and the logs live. The Settings panel offers it
+// as "Open install folder".
+func (a *App) OpenInstallFolder() error {
 	a.mu.RLock()
 	root := a.cfg.InstallRoot
 	a.mu.RUnlock()

@@ -585,7 +585,55 @@ async function refresh() {
 
 document.getElementById("recheck").addEventListener("click", refresh);
 document.getElementById("open-portal").addEventListener("click", () => callBackend("OpenPortal"));
-document.getElementById("settings").addEventListener("click", () => callBackend("OpenSettings"));
+document.getElementById("settings").addEventListener("click", async () => {
+  try {
+    showSettings(await callBackend("GetSettings"));
+  } catch (err) {
+    alert("Could not read the settings: " + String(err && err.message || err));
+  }
+});
+
+// The settings panel shows what is set up and where it points. Keys and
+// secrets are never sent here, so there is nothing sensitive to show.
+function showSettings(s) {
+  let panel = document.getElementById("settings-panel");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "settings-panel";
+    panel.className = "verdict-box";
+    panel.dataset.state = "";
+    document.querySelector("footer.foot").before(panel);
+  }
+  panel.textContent = "";
+  const doors = { funnel: "Tailscale Funnel", relay: "Your own server (relay)", direct: "Straight to this PC" };
+  const h = document.createElement("p");
+  h.innerHTML = "<strong>Settings</strong>";
+  const dl = document.createElement("dl");
+  for (const [k, v] of [
+    ["Way in", doors[s.door] || s.door],
+    ["Address people type", s.portal],
+    ["Sign-in address", s.signIn],
+    ["Sign-in account", s.adminUser],
+    ["Computers the gateway may reach", (s.targets || []).join(", ") || "none"],
+  ]) {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.textContent = v;
+    dl.append(dt, dd);
+  }
+  const row = document.createElement("div");
+  row.className = "actions";
+  const open = document.createElement("button");
+  open.className = "ghost";
+  open.textContent = "Open install folder";
+  open.title = "Config files, the Caddy and gateway configs, and the logs.";
+  open.addEventListener("click", () => callBackend("OpenInstallFolder"));
+  const close = document.createElement("button");
+  close.className = "ghost";
+  close.textContent = "Close";
+  close.addEventListener("click", () => panel.remove());
+  row.append(open, close);
+  panel.append(h, dl, row);
+}
 document.getElementById("stop-gw").addEventListener("click", (e) =>
   act(e.currentTarget, { label: "Stop gateway", call: "StopGateway" }));
 document.getElementById("users").addEventListener("click", (e) =>
