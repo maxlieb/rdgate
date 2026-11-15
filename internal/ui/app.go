@@ -213,6 +213,9 @@ type InstallOptions struct {
 	DuckName  string   `json:"duckName"`
 	DuckToken string   `json:"duckToken"`
 	DDNSURL   string   `json:"ddnsUrl"`
+	NoIPHost  string   `json:"noipHost"`
+	NoIPUser  string   `json:"noipUser"`
+	NoIPPass  string   `json:"noipPass"`
 
 	// AdminUser and AdminPassword are what the person chose on the account
 	// step. An empty name keeps the default; an empty password means one is
@@ -279,6 +282,13 @@ func (a *App) RunInstall(opts InstallOptions) (*provision.Result, error) {
 			// A DuckDNS name is the address, so the person need not type it twice.
 			if cfg.PublicDomain == "" {
 				cfg.PublicDomain = strings.TrimSuffix(strings.ToLower(opts.DuckName), ".duckdns.org") + ".duckdns.org"
+			}
+		case opts.NoIPHost != "":
+			if cfg.DDNSURL, err = provision.NoIPURL(opts.NoIPHost, opts.NoIPUser, opts.NoIPPass); err != nil {
+				return nil, err
+			}
+			if cfg.PublicDomain == "" {
+				cfg.PublicDomain = strings.ToLower(strings.TrimSpace(opts.NoIPHost))
 			}
 		case opts.DDNSURL != "":
 			cfg.DDNSURL = opts.DDNSURL
