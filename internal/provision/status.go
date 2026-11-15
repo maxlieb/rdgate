@@ -167,32 +167,36 @@ func probeHTTPS(ctx context.Context, host string) (int, error) {
 // door can work on this connection at all.
 type DirectCheck struct {
 	RouterFound bool   `json:"routerFound"` // a UPnP router answered
-	ExternalIP  string `json:"externalIp"`  // what the router says it is
-	Public      bool   `json:"public"`      // that address is reachable from the internet
+	ExternalIP  string `json:"externalIp"`  // the router's WAN address
+	PublicIP    string `json:"publicIp"`    // the address the internet sees
+	Verdict     string `json:"verdict"`     // direct | cgnat | mismatch | unsure
+	Public      bool   `json:"public"`      // inbound connections should reach this PC
+	CGNAT       bool   `json:"cgnat"`       // the provider translates the address upstream
+	NeedsWAN    bool   `json:"needsWan"`    // no router answered; the person should type the WAN address
 	Reason      string `json:"reason"`      // plain-language verdict
 }
 
-// CheckDirect asks the router what address it has. Behind CGNAT that address
-// is private or in 100.64.0.0/10, which settles the question without anyone
-// having to understand CGNAT.
+// CheckDirect asks the router what address it has, then compares it with the
+// internet's view. Without a router that answers, it asks the person to copy
+// the WAN address from the router's status page instead.
 func CheckDirect(ctx context.Context) DirectCheck {
+	public, _ := PublicIPv4(ctx)
 	igd, err := DiscoverIGD(ctx)
 	if err != nil {
-		return DirectCheck{Reason: "No router answered the automatic setup request. " +
-			"You can still use this option by forwarding port 443 to this PC in the router's settings."}
+		return DirectCheck{NeedsWAN: true, PublicIP: public,
+			Reason: "No router answered the automatic setup request. Open the router's status page, copy " +
+				"the WAN or internet address shown there, and paste it below. The app then checks whether " +
+				"your provider puts you behind CGNAT."}
 	}
 	ip, err := igd.ExternalIP(ctx)
 	if err != nil {
-		return DirectCheck{RouterFound: true,
+		return DirectCheck{RouterFound: true, PublicIP: public,
 			Reason: "The router answered but would not say what address it has."}
 	}
-	if !IsPublicIPv4(ip) {
-		return DirectCheck{RouterFound: true, ExternalIP: ip,
-			Reason: "Your internet provider shares one public address between customers " +
-				"(the router reports " + ip + "), so nothing can reach you directly. Use Tailscale Funnel or a relay server instead."}
-	}
-	return DirectCheck{RouterFound: true, ExternalIP: ip, Public: true,
-		Reason: "Your connection has its own public address (" + ip + ") and the router supports automatic setup."}
+	verdict, reason := ClassifyWAN(ip, public)
+	return DirectCheck{RouterFound: true, ExternalIP: ip, PublicIP: public, Verdict: verdict,
+		Public: verdict == VerdictDirect, CGNAT: verdict == VerdictCGNAT || verdict == VerdictMismatch,
+		Reason: reason}
 }
 
 // checkListening probes the loopback port rather than looking for a process,

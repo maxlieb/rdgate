@@ -925,25 +925,40 @@ function buildDirectCheck(w) {
 
   const show = (c) => {
     out.textContent = "";
+    if (c.needsWan) {
+      // No router answered, so the person copies the WAN address from the router.
+      out.appendChild(note("Open the router's status page (often 192.168.1.1 or 192.168.0.1) and " +
+        "copy the WAN or internet address. It is not the address of this PC."));
+      const fields = document.createElement("div");
+      fields.className = "fields";
+      fields.appendChild(field("Router's WAN address", "wanAddr", { placeholder: "e.g. 203.0.113.7" }));
+      out.appendChild(fields);
+      const check = button("Check this address", async (b) => {
+        b.disabled = true; b.textContent = "Checking…";
+        try { wiz.directCheck = await callBackend("CheckWAN", wiz.form.wanAddr || ""); }
+        catch (e) { wiz.directCheck = { public: false, cgnat: false, verdict: "unsure", reason: String(e?.message || e) }; }
+        renderWizard(w);
+      });
+      out.appendChild(actions(check, button("Choose another way", () => { wiz.door = null; wiz.directCheck = null; renderWizard(w); }, true)));
+      return;
+    }
     const box = document.createElement("div");
     box.className = "verdict-box";
-    box.dataset.state = c.routerFound ? (c.public ? "ok" : "bad") : "meh";
+    box.dataset.state = c.public ? "ok" : c.verdict === "unsure" ? "meh" : "bad";
     box.textContent = c.reason;
     out.appendChild(box);
-    const btns = [];
-    if (!c.routerFound || c.public) {
-      btns.push(button("Continue", () => { wiz.directAck = true; renderWizard(w); }));
+    if (c.public) {
+      out.appendChild(actions(button("Continue", () => { wiz.directAck = true; renderWizard(w); })));
     } else {
-      btns.push(button("Choose another way", () => { wiz.door = null; wiz.directCheck = null; renderWizard(w); }));
+      out.appendChild(actions(button("Choose another way", () => { wiz.door = null; wiz.directCheck = null; renderWizard(w); })));
     }
-    out.appendChild(actions(...btns));
   };
 
   if (wiz.directCheck) { show(wiz.directCheck); return frag; }
   frag.appendChild(actions(button("Check my connection", async (b) => {
     b.disabled = true; b.textContent = "Checking…";
     try { wiz.directCheck = await callBackend("CheckDirect"); }
-    catch (e) { wiz.directCheck = { routerFound: false, public: false, reason: String(e?.message || e) }; }
+    catch (e) { wiz.directCheck = { public: false, verdict: "unsure", reason: String(e?.message || e) }; }
     renderWizard(w);
   })));
   return frag;

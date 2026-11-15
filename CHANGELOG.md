@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.40
+
+- The direct option checks for CGNAT. It compares the router's WAN address with the address the internet sees, and a private or 100.64.0.0/10 WAN address means the provider translates it again. Port forwarding cannot work behind that, so the app says so.
+- When no router answers the automatic setup, the check asks for the WAN address from the router's status page and judges it the same way. Continue is offered only when the connection is verified as direct.
+
 ## 0.1.39
 
 - Choosing a way in sticks. The choice screen redraws every few seconds, and each redraw used to put the selection back on Funnel.

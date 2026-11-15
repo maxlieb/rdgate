@@ -217,6 +217,13 @@ type InstallOptions struct {
 	AdminPassword string `json:"adminPassword"`
 }
 
+// CheckWAN checks an address the person copied from the router's status page.
+func (a *App) CheckWAN(wan string) (provision.DirectCheck, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return provision.CheckWAN(ctx, wan)
+}
+
 // CheckDirect answers "can this connection work without a server?" before the
 // person commits to the direct option.
 func (a *App) CheckDirect() provision.DirectCheck {
