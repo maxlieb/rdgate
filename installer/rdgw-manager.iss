@@ -75,9 +75,10 @@ Source: "trust-signing-cert.ps1"; DestDir: "{app}"; Flags: ignoreversion skipifs
 Name: "{commonappdata}\RDGateway"; Permissions: admins-full system-full
 
 [Icons]
-Name: "{group}\{#AppName}";                 Filename: "{app}\{#AppExe}"
+; IconFilename is set explicitly: a shortcut without it can keep a default icon.
+Name: "{group}\{#AppName}";                 Filename: "{app}\{#AppExe}"; IconFilename: "{app}\{#AppExe}"; IconIndex: 0
 Name: "{group}\Uninstall {#AppName}";       Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#AppName}";           Filename: "{app}\{#AppExe}"; Tasks: startup
+Name: "{autodesktop}\{#AppName}";           Filename: "{app}\{#AppExe}"; IconFilename: "{app}\{#AppExe}"; IconIndex: 0; Tasks: startup
 
 [Run]
 ; The README is offered on the last page, but not opened unless ticked.

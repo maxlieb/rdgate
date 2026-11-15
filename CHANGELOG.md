@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Shortcuts use the RDGate icon from the program file.
+
 ## 0.1.48
 
 - "Set it up" shows progress at once and cannot be pressed twice.
