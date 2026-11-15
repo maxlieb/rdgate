@@ -1202,45 +1202,6 @@ function buildAccount(w) {
   return frag;
 }
 
-function paintSpeed(out, r) {
-  out.textContent = "";
-  const line = (text, bold) => {
-    const d = document.createElement("div");
-    d.className = "check-row";
-    const t = document.createElement("strong");
-    t.textContent = text;
-    if (!bold) t.style.fontWeight = "400";
-    d.appendChild(t);
-    out.appendChild(d);
-  };
-  if (r.reference) {
-    line(r.reference.ok
-      ? "Tailscale's public edge (stands in for Funnel until yours exists): " + r.reference.ms + " ms"
-      : "Tailscale's public edge did not answer from here", true);
-  }
-  if (r.funnel) {
-    line(r.funnel.ok
-      ? "Your Funnel address: " + r.funnel.ms + " ms"
-      : "Your Funnel address is not published yet", true);
-  }
-  const table = document.createElement("div");
-  table.className = "check-row";
-  for (const p of r.regions) {
-    const row = document.createElement("p");
-    row.className = "step-note";
-    const isFastest = r.fastest && p.name === r.fastest;
-    row.textContent = (isFastest ? "★ " : "") + p.name + " (" + p.city + "): " + (p.ok ? p.ms + " ms" : "no reply");
-    if (isFastest) row.style.fontWeight = "600";
-    table.appendChild(row);
-  }
-  out.appendChild(table);
-  if (r.fastest) {
-    const fast = r.regions.find(p => p.name === r.fastest);
-    out.appendChild(note("Fastest from here: " + fast.city + " (" + fast.ms + " ms). " +
-      "A server in that region answers quickest for you. The Funnel row shows up once Tailscale is connected."));
-  }
-}
-
 function buildRdpgw(w) {
   const frag = document.createDocumentFragment();
   frag.appendChild(note(
