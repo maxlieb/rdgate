@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Installing over a running install stops the gateway tasks and programs first, then starts the tasks that were running. The copy no longer fails on rdgwctl.exe.
+
 ## 0.1.49
 
 - Simpler server steps in the relay guide, and buttons to buy a domain.
