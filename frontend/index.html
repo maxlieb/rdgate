@@ -972,6 +972,9 @@ function buildDoor(w) {
     sp.className = "choice-speed";
     sp.dataset.speedFor = d.id;
     sp.textContent = choiceSpeedText(d.id);
+    // Each redraw rebuilds the cards, so the colour is set here as well as on measure.
+    const colour = speedClass(d.id);
+    if (colour) sp.classList.add(colour);
     row.append(r, t, x, c, sp);
     list.appendChild(row);
   });
