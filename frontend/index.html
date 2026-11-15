@@ -654,7 +654,50 @@ function showSettings(s) {
   close.textContent = "Close";
   close.addEventListener("click", () => panel.remove());
   row.append(open, close);
-  panel.append(h, dl, row);
+
+  // Updates: the check is manual. The install closes RDGate and takes the
+  // gateway down for about a minute, so it always asks first.
+  const upRow = document.createElement("div");
+  upRow.className = "actions";
+  const upNote = document.createElement("p");
+  upNote.className = "choice-text";
+  const check = document.createElement("button");
+  check.className = "ghost";
+  check.textContent = "Check for updates";
+  check.addEventListener("click", async () => {
+    check.disabled = true;
+    upNote.textContent = "Checking…";
+    try {
+      const st = await callBackend("CheckUpdate");
+      if (!st.newer) {
+        upNote.textContent = "You have the latest version (" + st.current + ").";
+      } else if (!st.canInstall) {
+        upNote.textContent = "Version " + st.latest + " is available, but this install cannot check it: " + st.reason;
+      } else {
+        upNote.textContent = "Version " + st.latest + " is available.";
+        const install = document.createElement("button");
+        install.textContent = "Install " + st.latest;
+        install.addEventListener("click", async () => {
+          if (!confirm("RDGate will close and reopen. The gateway is down for about a minute while it installs. Continue?")) return;
+          install.disabled = true;
+          upNote.textContent = "Installing… RDGate will close and reopen.";
+          try {
+            await callBackend("InstallUpdate");
+          } catch (err) {
+            upNote.textContent = "The update did not start: " + err;
+            install.disabled = false;
+          }
+        });
+        upRow.appendChild(install);
+      }
+    } catch (err) {
+      upNote.textContent = "Could not check for updates: " + err;
+    } finally {
+      check.disabled = false;
+    }
+  });
+  upRow.prepend(check);
+  panel.append(h, dl, row, upRow, upNote);
 }
 document.getElementById("stop-gw").addEventListener("click", (e) =>
   act(e.currentTarget, { label: "Stop gateway", call: "StopGateway" }));

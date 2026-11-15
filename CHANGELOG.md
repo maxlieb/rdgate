@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Signed releases: the installer trusts RDGate's self-signed certificate on first install, so later updates signed with it install without publisher warnings. Set up once with `installer\tools\new-signing-cert.ps1`.
+- Settings has a "Check for updates" button. An update is downloaded by RDGate itself, its signature is checked against the installed certificate, and it is installed while the gateway is briefly stopped.
+- The speed line on each option card sits on one or two lines, with shorter wording.
+
 ## 0.1.41
 
 - The speed check shows inside each option card: Funnel shows its own address or Tailscale's edge, the server option shows only the fastest Oracle region, and the direct option says there is nothing to measure from here.

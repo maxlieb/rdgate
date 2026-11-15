@@ -34,6 +34,10 @@ WizardStyle=modern
 ; rather than requested opportunistically.
 PrivilegesRequired=admin
 
+; An in-app update runs this installer silently while RDGate is closed.
+CloseApplications=yes
+RestartApplications=no
+
 ; The gateway is 64-bit only; rdpgw and Gitea publish no 32-bit Windows builds.
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible

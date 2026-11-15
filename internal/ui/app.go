@@ -35,6 +35,10 @@ type App struct {
 	// no dependency on the GUI toolkit and still compiles and tests alone.
 	Emit func(event string, data any)
 
+	// Quit closes the window. main.go wires it to Wails's runtime.Quit. An
+	// update closes RDGate so the installer can replace it.
+	Quit func()
+
 	// funnelURL is the page Tailscale last asked us to open to allow Funnel.
 	funnelURL string
 }
