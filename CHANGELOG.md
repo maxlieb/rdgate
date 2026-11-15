@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.47
 
+- Continue on the account step moves on again.
 - The direct option lets you choose the dynamic DNS provider: DuckDNS, No-IP (hostname with username and password), or your own domain or another provider. A domain that is a CNAME to a No-IP or DuckDNS name works with the update link.
 
 ## 0.1.46
