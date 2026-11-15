@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.45
+
+- The wizard redraws only when the state changed, so typing and the speed colours are not lost.
+- The speed colour is kept when the cards are rebuilt.
+
+## 0.1.44
+
+- When the direct check does not confirm the way works, the wizard offers "Continue anyway" with a warning.
+- Each network option shows its speed in green when it is the faster of the two, and in ochre when it is slower.
+- "Straight to this PC" says it is usually fastest but less secure than the other two options.
+- The Oracle option gives the domain cost in dollars.
+- The direct check asks the router for its internet address over NAT-PMP, with no router login and no address to copy. If the router does not answer, the check says the address is unknown.
+- The wizard no longer redraws while you type a domain, or during a speed measurement.
+
+## 0.1.43
+
+- Releases are signed with RDGate's self-signed certificate, so the installer and the program files are trusted once the signed version is installed. Updates from this version on install from the app itself.
+
+## 0.1.42
+
+- Signed releases: the installer trusts RDGate's self-signed certificate on first install, so later updates signed with it install without publisher warnings. Set up once with `installer\tools\new-signing-cert.ps1`.
+- Settings has a "Check for updates" button. An update is downloaded by RDGate itself, its signature is checked against the installed certificate, and it is installed while the gateway is briefly stopped.
+- The speed line on each option card sits on one or two lines, with shorter wording.
+
 ## 0.1.41
 
 - The speed check shows inside each option card: Funnel shows its own address or Tailscale's edge, the server option shows only the fastest Oracle region, and the direct option says there is nothing to measure from here.

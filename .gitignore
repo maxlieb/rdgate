@@ -20,3 +20,7 @@ caddy/
 
 # Local test screenshots
 shots/
+
+# Signing: the certificate is generated on the build machine, never committed.
+installer/rdgate-signing.cer
+*.pfx

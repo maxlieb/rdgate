@@ -51,6 +51,7 @@ func main() {
 			app.Emit = func(event string, data any) {
 				runtime.EventsEmit(ctx, event, data)
 			}
+			app.Quit = func() { runtime.Quit(ctx) }
 		},
 		Title: "RDGate",
 		// Sized for the signal path at its tallest, with two problems open.
