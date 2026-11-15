@@ -29,6 +29,30 @@ func DuckDNSURL(name, token string) (string, error) {
 	return "https://www.duckdns.org/update?" + q.Encode(), nil
 }
 
+// NoIPURL builds the update address for a No-IP hostname. No-IP speaks the
+// dyndns2 protocol, which takes the account's username and password as basic
+// authentication. They are carried in the URL, the same way a DuckDNS token is,
+// so the stored address is a secret like the others.
+func NoIPURL(hostname, user, pass string) (string, error) {
+	hostname = strings.ToLower(strings.TrimSpace(hostname))
+	if hostname == "" || !strings.Contains(hostname, ".") || strings.ContainsAny(hostname, "/?&# @:") {
+		return "", errors.New("enter the full No-IP name, such as myhome.ddns.net")
+	}
+	if strings.TrimSpace(user) == "" || pass == "" {
+		return "", errors.New("enter the No-IP username and password")
+	}
+	q := url.Values{}
+	q.Set("hostname", hostname)
+	u := url.URL{
+		Scheme:   "https",
+		User:     url.UserPassword(strings.TrimSpace(user), pass),
+		Host:     "dynupdate.no-ip.com",
+		Path:     "/nic/update",
+		RawQuery: q.Encode(),
+	}
+	return u.String(), nil
+}
+
 // UpdateDDNS asks the provider to point the name at the caller's address.
 //
 // Providers disagree on how to say no: DuckDNS answers 200 with "KO", dyndns2
@@ -72,6 +96,11 @@ func UpdateDDNSWith(ctx context.Context, client *http.Client, rawURL string) (st
 // redact keeps a token out of error text, which ends up on screen and in logs.
 func redact(msg, rawURL string) string {
 	if u, err := url.Parse(rawURL); err == nil {
+		if u.User != nil {
+			if pw, ok := u.User.Password(); ok && len(pw) >= 4 {
+				msg = strings.ReplaceAll(msg, pw, "***")
+			}
+		}
 		for _, vs := range u.Query() {
 			for _, v := range vs {
 				if len(v) >= 6 {

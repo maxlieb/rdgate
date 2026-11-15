@@ -1056,6 +1056,11 @@ function field(label, key, opts = {}) {
   return wrap;
 }
 
+// The provider chosen for the direct option. DuckDNS is the default.
+function directProvider() {
+  return wiz.form.ddns || "duck";
+}
+
 function buildAddress(w) {
   const frag = document.createDocumentFragment();
   const fields = document.createElement("div");
@@ -1071,38 +1076,64 @@ function buildAddress(w) {
       field("Domain name", "domain", { placeholder: "rdgw.example.com" }),
       field("Email for certificate notices (optional)", "email", { placeholder: "you@example.com" }));
   } else {
-    frag.appendChild(note("Your home address changes now and then, so a name service keeps a " +
-      "fixed name pointing at it. DuckDNS is free; sign in at duckdns.org, create a name, and copy the token shown at the top."));
-    const duck = field("DuckDNS name", "duckName", { placeholder: "myhome", help: "Just the part before .duckdns.org" });
-    const tok = field("DuckDNS token", "duckToken", { secret: true });
-    const own = document.createElement("details");
-    own.className = "guide";
-    const sm = document.createElement("summary"); sm.textContent = "I have my own domain or another provider";
-    own.appendChild(sm);
-    const f2 = document.createElement("div"); f2.className = "fields";
-    f2.append(
-      field("Your address", "domain", { placeholder: "rdgw.example.com" }),
-      field("Update link from your provider (optional)", "ddnsUrl",
-        { secret: true, help: "Starts with https://. Leave empty if your address never changes." }));
-    own.appendChild(f2);
-    fields.append(duck, tok, own,
-      field("Email for certificate notices (optional)", "email", { placeholder: "you@example.com" }));
-    frag.appendChild(note("DuckDNS names are widely recognised by company web filters. " +
-      "If this PC's network is filtered, your own domain is the safer choice."));
+    frag.appendChild(note("Your home address changes now and then, so a name service keeps a fixed name " +
+      "pointing at it. Use a provider you already have, or your own domain."));
+    const providers = [["duck", "DuckDNS (free)"], ["noip", "No-IP"], ["own", "My own domain or another provider"]];
+    const sel = document.createElement("label");
+    sel.className = "field";
+    const sp = document.createElement("span"); sp.textContent = "Provider";
+    const select = document.createElement("select");
+    for (const [v, label] of providers) {
+      const o = document.createElement("option"); o.value = v; o.textContent = label; select.appendChild(o);
+    }
+    select.value = directProvider();
+    select.addEventListener("change", () => { wiz.form.ddns = select.value; renderWizard(w); });
+    sel.append(sp, select);
+    fields.appendChild(sel);
+
+    const chosen = directProvider();
+    if (chosen === "duck") {
+      frag.appendChild(note("DuckDNS: sign in at duckdns.org, create a name, and copy the token shown at the top. " +
+        "DuckDNS names are widely recognised by company web filters, so if this PC's network is filtered, " +
+        "your own domain is the safer choice."));
+      fields.append(
+        field("DuckDNS name", "duckName", { placeholder: "myhome", help: "Just the part before .duckdns.org" }),
+        field("DuckDNS token", "duckToken", { secret: true }));
+    } else if (chosen === "noip") {
+      frag.appendChild(note("No-IP: sign in at noip.com, create a hostname, and use that account's username and " +
+        "password here. Free No-IP hostnames have to be confirmed every 30 days, or they stop working."));
+      fields.append(
+        field("No-IP hostname", "noipHost", { placeholder: "myhome.ddns.net" }),
+        field("No-IP username", "noipUser"),
+        field("No-IP password", "noipPass", { secret: true }));
+    } else {
+      frag.appendChild(note("Your own domain works when it points at your home address. If it is a CNAME to a " +
+        "No-IP or DuckDNS name, paste that provider's update link below: your domain stays the address people type."));
+      fields.append(
+        field("Your address", "domain", { placeholder: "rdgw.example.com" }),
+        field("Update link from your provider (optional)", "ddnsUrl",
+          { secret: true, help: "Starts with https://. Leave empty if your address never changes." }));
+    }
+    fields.append(field("Email for certificate notices (optional)", "email", { placeholder: "you@example.com" }));
   }
   frag.append(fields, err);
 
   frag.appendChild(actions(button("Continue", () => {
     const f = wiz.form;
-    const usingDuck = wiz.door === "direct" && f.duckName && !f.domain;
+    const provider = directProvider();
     if (wiz.door === "relay" && !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(f.domain)) {
       err.textContent = "Enter a full domain name, like rdgw.example.com."; err.hidden = false; return;
     }
-    if (wiz.door === "direct" && !usingDuck && !f.domain) {
-      err.textContent = "Enter a DuckDNS name, or your own address."; err.hidden = false; return;
-    }
-    if (usingDuck && !f.duckToken) {
-      err.textContent = "Paste the DuckDNS token as well."; err.hidden = false; return;
+    if (wiz.door === "direct") {
+      if (provider === "duck" && (!f.duckName || !f.duckToken)) {
+        err.textContent = "Enter the DuckDNS name and token."; err.hidden = false; return;
+      }
+      if (provider === "noip" && (!f.noipHost || !f.noipUser || !f.noipPass)) {
+        err.textContent = "Enter the No-IP hostname, username and password."; err.hidden = false; return;
+      }
+      if (provider === "own" && !f.domain) {
+        err.textContent = "Enter your address, or pick another provider."; err.hidden = false; return;
+      }
     }
     wiz.addressOk = true; renderWizard(w);
   })));
@@ -1365,12 +1396,17 @@ async function startInstall(w) {
 
   try {
     const f = wiz.form;
+    const provider = directProvider();
     wiz.result = await callBackend("RunInstall", {
       door: wiz.door,
       targets: wiz.targets.filter(t => t.on).map(t => t.addr),
-      domain: f.domain, email: f.email,
-      duckName: wiz.door === "direct" ? f.duckName : "",
-      duckToken: f.duckToken, ddnsUrl: f.ddnsUrl,
+      domain: wiz.door === "direct" && provider !== "own" ? "" : f.domain, email: f.email,
+      duckName: wiz.door === "direct" && provider === "duck" ? f.duckName : "",
+      duckToken: provider === "duck" ? f.duckToken : "",
+      ddnsUrl: wiz.door === "direct" && provider === "own" ? f.ddnsUrl : "",
+      noipHost: wiz.door === "direct" && provider === "noip" ? f.noipHost : "",
+      noipUser: wiz.door === "direct" && provider === "noip" ? f.noipUser : "",
+      noipPass: wiz.door === "direct" && provider === "noip" ? f.noipPass : "",
       adminUser: wiz.account ? wiz.account.name : "",
       adminPassword: wiz.account ? wiz.account.pass : "",
     });
