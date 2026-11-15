@@ -316,6 +316,8 @@ pre.script { margin: 10px 0 0; max-height: 150px; overflow: auto; padding: 10px 
 .brand { display: inline-flex; align-items: center; gap: .5rem; }
 .brand svg { width: 1.6rem; height: 1.6rem; flex: none; }
 .choice-speed { grid-column: 2; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.choice-speed.fast { color: var(--live); }
+.choice-speed.slow { color: var(--waiting); }
 </style>
 </head>
 <body>
@@ -779,12 +781,13 @@ const DOORS = [
     cost: "Free. No server, no domain." },
   { id: "direct", title: "Straight to this PC",
     text: "Your router sends the traffic here, and a free name service keeps the address current. " +
-          "Simple and fast, but it only works if your internet provider gives you your own public address.",
-    cost: "Free. The app checks whether your connection allows it." },
+          "Usually the fastest, but this PC is then reachable from the internet itself, so it is less " +
+          "secure than the other two: keep the sign-in strong. Only works if your provider gives you your own public address.",
+    cost: "Free. Needs one port opened on your router; the app checks that your connection allows it." },
   { id: "relay", title: "Through a small server of your own",
     text: "A tiny free server holds your domain name and passes traffic to this PC. Works on any " +
           "connection, opens nothing on your router, and the address looks like any ordinary website.",
-    cost: "Free server (Oracle), a domain is about $10 a year. About 20 minutes, once." },
+    cost: "Oracle server: free. Domain: about $10 to $15 a year, depending on the ending. About 20 minutes, once." },
 ];
 
 // The path through the wizard depends on the way chosen. Each step says for
@@ -910,9 +913,38 @@ function choiceSpeedText(id) {
   return "No server to measure";
 }
 
+// The number a card shows, for comparing the two network options.
+function speedMs(id) {
+  const r = wiz.speed;
+  if (!r) return null;
+  if (id === "funnel") {
+    if (r.funnel && r.funnel.ok) return r.funnel.ms;
+    if (r.reference && r.reference.ok) return r.reference.ms;
+    return null;
+  }
+  if (id === "relay") {
+    const fast = r.regions && r.regions.find(p => p.name === r.fastest);
+    return fast ? fast.ms : null;
+  }
+  return null;
+}
+
+// Green marks the faster of Tailscale and Oracle, ochre the slower one.
+function speedClass(id) {
+  const a = speedMs("funnel"), b = speedMs("relay");
+  if (a == null || b == null) return "";
+  if (id !== "funnel" && id !== "relay") return "";
+  if (a === b) return "fast";
+  const mine = id === "funnel" ? a : b;
+  return mine < (id === "funnel" ? b : a) ? "fast" : "slow";
+}
+
 function paintChoiceSpeeds() {
   document.querySelectorAll("[data-speed-for]").forEach(el => {
     el.textContent = wiz.speedRunning && !wiz.speed ? "Measuring…" : choiceSpeedText(el.dataset.speedFor);
+    el.classList.remove("fast", "slow");
+    const c = speedClass(el.dataset.speedFor);
+    if (c) el.classList.add(c);
   });
   const m = document.querySelector('[data-measure="1"]');
   if (m) { m.disabled = wiz.speedRunning; m.textContent = wiz.speedRunning ? "Measuring…" : "Measure again"; }
@@ -968,30 +1000,13 @@ function buildDoor(w) {
 
 function buildDirectCheck(w) {
   const frag = document.createDocumentFragment();
-  frag.appendChild(note("Before going further, the app asks your router what address it has. " +
+  frag.appendChild(note("The app asks your router for its internet address. No login is needed. " +
     "Some providers share one address between many customers, and that cannot work this way."));
   const out = document.createElement("div");
   frag.appendChild(out);
 
   const show = (c) => {
     out.textContent = "";
-    if (c.needsWan) {
-      // No router answered, so the person copies the WAN address from the router.
-      out.appendChild(note("Open the router's status page (often 192.168.1.1 or 192.168.0.1) and " +
-        "copy the WAN or internet address. It is not the address of this PC."));
-      const fields = document.createElement("div");
-      fields.className = "fields";
-      fields.appendChild(field("Router's WAN address", "wanAddr", { placeholder: "e.g. 203.0.113.7" }));
-      out.appendChild(fields);
-      const check = button("Check this address", async (b) => {
-        b.disabled = true; b.textContent = "Checking…";
-        try { wiz.directCheck = await callBackend("CheckWAN", wiz.form.wanAddr || ""); }
-        catch (e) { wiz.directCheck = { public: false, cgnat: false, verdict: "unsure", reason: String(e?.message || e) }; }
-        renderWizard(w);
-      });
-      out.appendChild(actions(check, button("Choose another way", () => { wiz.door = null; wiz.directCheck = null; renderWizard(w); }, true)));
-      return;
-    }
     const box = document.createElement("div");
     box.className = "verdict-box";
     box.dataset.state = c.public ? "ok" : c.verdict === "unsure" ? "meh" : "bad";
@@ -1464,6 +1479,14 @@ function escapeHTML(s) {
 
 let wizardPoll = null;
 async function pollWizard() {
+  // A redraw would drop focus while typing, and reset the cards during a measurement.
+  const el = document.activeElement;
+  const typing = el && el.closest && el.closest("#wizard") &&
+    (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && !/^(radio|checkbox)$/.test(el.type)));
+  if (typing || wiz.speedRunning) {
+    if (!wizardPoll) wizardPoll = setInterval(pollWizard, 3000);
+    return;
+  }
   try {
     const w = await callBackend("Wizard");
     renderWizard(w);

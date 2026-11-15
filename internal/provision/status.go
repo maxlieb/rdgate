@@ -181,17 +181,12 @@ type DirectCheck struct {
 // the WAN address from the router's status page instead.
 func CheckDirect(ctx context.Context) DirectCheck {
 	public, _ := PublicIPv4(ctx)
-	igd, err := DiscoverIGD(ctx)
-	if err != nil {
-		return DirectCheck{NeedsWAN: true, PublicIP: public,
-			Reason: "No router answered the automatic setup request. Open the router's status page, copy " +
-				"the WAN or internet address shown there, and paste it below. The app then checks whether " +
-				"your provider puts you behind CGNAT."}
-	}
-	ip, err := igd.ExternalIP(ctx)
-	if err != nil {
-		return DirectCheck{RouterFound: true, PublicIP: public,
-			Reason: "The router answered but would not say what address it has."}
+	ip := routerExternalIP(ctx)
+	if ip == "" {
+		return DirectCheck{PublicIP: public, Verdict: VerdictUnsure,
+			Reason: "This PC could not learn the router's internet address by itself. Many routers answer " +
+				"this only when UPnP or NAT-PMP is switched on. Nothing was changed. Tailscale Funnel or " +
+				"a server of your own works without this check."}
 	}
 	verdict, reason := ClassifyWAN(ip, public)
 	return DirectCheck{RouterFound: true, ExternalIP: ip, PublicIP: public, Verdict: verdict,
