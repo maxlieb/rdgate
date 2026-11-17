@@ -143,6 +143,10 @@ jobs:
         with:
           name: rdgate-installer
           path: dist/*.exe
+          # Each installer is about 59 MB, and the plan includes 0.5 GB of Actions
+          # storage. A release keeps the installer for good, so the run copy is
+          # only needed for a day.
+          retention-days: 1
       - name: Publish a Release for a manual run with a version
         # Only a manual run with a version entered publishes. Pushes stop at the artifact.
         if: github.event_name == 'workflow_dispatch' && inputs.version != ''
