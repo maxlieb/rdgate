@@ -140,6 +140,9 @@ jobs:
           SIGNING_PFX_PASSWORD: ${{ secrets.SIGNING_PFX_PASSWORD }}
         run: installer\sign.ps1 -Files dist\*.exe
       - uses: actions/upload-artifact@v4
+        # The release below uses dist\ directly, so a run copy that cannot be
+        # stored (storage quota is recalculated every 6-12 hours) must not fail the build.
+        continue-on-error: true
         with:
           name: rdgate-installer
           path: dist/*.exe
